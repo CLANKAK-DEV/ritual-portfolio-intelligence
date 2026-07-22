@@ -1,6 +1,7 @@
 {
   "name": "ritual-portfolio-intelligence",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "engines": {
     "node": "22.x"
