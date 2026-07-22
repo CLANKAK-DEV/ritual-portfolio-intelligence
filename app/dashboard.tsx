@@ -403,11 +403,11 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
               : "Run on Ritual";
 
   const connectButton = isConnected ? (
-    <button className="wallet-button connected" onClick={() => disconnect()} aria-label="Disconnect wallet">
+    <button type="button" className="wallet-button connected" onClick={() => disconnect()} aria-label={`Disconnect wallet ${compactAddress(address)}`}>
       <span className="status-dot" /> {compactAddress(address)}
     </button>
   ) : (
-    <button className="wallet-button" onClick={() => connectors[0] && connect({ connector: connectors[0] })} disabled={isConnecting}>
+    <button type="button" className="wallet-button" onClick={() => connectors[0] && connect({ connector: connectors[0] })} disabled={isConnecting || !connectors[0]}>
       {isConnecting ? "Connecting…" : "Connect wallet"}
     </button>
   );
@@ -420,81 +420,81 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
           <span className="brand-mark"><i /><i /><i /></span>
           <span>RITUAL<span>/INTEL</span></span>
         </a>
-        <nav className={mobileNav ? "nav-links open" : "nav-links"} aria-label="Primary navigation">
-          <button className={tab === "overview" ? "active" : ""} onClick={() => { setTab("overview"); setMobileNav(false); }}>Overview</button>
-          <button className={tab === "assets" ? "active" : ""} onClick={() => { setTab("assets"); setMobileNav(false); }}>Assets</button>
-          <button className={tab === "activity" ? "active" : ""} onClick={() => { setTab("activity"); setMobileNav(false); }}>Activity</button>
-          <a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer">Ritual docs ↗</a>
+        <nav id="primary-navigation" className={mobileNav ? "nav-links open" : "nav-links"} aria-label="Primary navigation">
+          <button type="button" className={tab === "overview" ? "active" : ""} onClick={() => { setTab("overview"); setMobileNav(false); }}>Overview</button>
+          <button type="button" className={tab === "assets" ? "active" : ""} onClick={() => { setTab("assets"); setMobileNav(false); }}>Assets</button>
+          <button type="button" className={tab === "activity" ? "active" : ""} onClick={() => { setTab("activity"); setMobileNav(false); }}>Activity</button>
+          <a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer">Documentation</a>
         </nav>
         <div className="top-actions">
-          <span className={`network-pill ${isConnected && !isRitualNetwork ? "wrong-network" : ""}`}><span /> {isConnected && !isRitualNetwork ? "Wrong network" : "Ritual testnet"}</span>
+          <span className={`network-pill ${isConnected && !isRitualNetwork ? "wrong-network" : ""}`} title={isConnected && !isRitualNetwork ? "Switch your wallet to Ritual testnet" : "Connected to Ritual testnet services"}><span /> {isConnected && !isRitualNetwork ? "Wrong network" : "Ritual testnet"}</span>
           {connectButton}
-          <button className="menu-button" onClick={() => setMobileNav((value) => !value)} aria-expanded={mobileNav} aria-label="Toggle navigation">☰</button>
+          <button type="button" className="menu-button" onClick={() => setMobileNav((value) => !value)} aria-expanded={mobileNav} aria-controls="primary-navigation">Menu</button>
         </div>
       </header>
 
       <main id="main">
         <section className="hero-grid">
           <div className="hero-copy">
-            <div className="eyebrow"><span>◇</span> TEE-verified portfolio intelligence <b>LIVE BETA</b></div>
-            <h1>Your portfolio,<br /><em>interpreted on-chain.</em></h1>
-            <p>Turn a wallet address into clear, defensible portfolio intelligence—powered by Ritual&apos;s native internet access and verifiable AI execution.</p>
-            <form className="wallet-search" onSubmit={runPreview}>
+            <div className="eyebrow"><span>Ritual native intelligence</span><b>Live testnet</b></div>
+            <h1>Your portfolio, <em>interpreted on-chain.</em></h1>
+            <p>Turn any wallet into clear portfolio intelligence, verified through Ritual&apos;s native HTTP and AI execution.</p>
+            <form className="wallet-search" onSubmit={runPreview} aria-busy={pipeline === "fetching" || pipeline === "reasoning"}>
               <label htmlFor="wallet-address">Wallet address</label>
               <div className="search-row">
-                <span className="search-icon">⌕</span>
-                <input id="wallet-address" value={walletInput} onChange={(event) => setWalletInput(event.target.value)} spellCheck={false} aria-describedby="wallet-help" />
+                <span className="search-icon" aria-hidden="true">0x</span>
+                <input id="wallet-address" value={walletInput} onChange={(event) => setWalletInput(event.target.value)} spellCheck={false} autoComplete="off" aria-describedby="wallet-help" />
                 <button type="submit" disabled={pipeline === "fetching" || pipeline === "reasoning"} aria-live="polite">
-                  {pipeline === "fetching" ? "Fetching" : pipeline === "reasoning" ? "Reasoning" : "Analyze"} <span>→</span>
+                  {pipeline === "fetching" ? "Fetching portfolio" : pipeline === "reasoning" ? "Analyzing risk" : "Analyze wallet"}
                 </button>
               </div>
               <div className="search-meta"><small id="wallet-help">Read-only preview. No signature required.</small><button type="button" onClick={() => setWalletInput(initialSnapshot.address)}>Use demo wallet</button></div>
             </form>
-            <div className="trust-row" aria-label="Product guarantees"><span><i>01</i> Multichain view</span><span><i>02</i> TEE-attested</span><span><i>03</i> User-controlled</span></div>
+            <div className="trust-row" aria-label="Product guarantees"><span><i>01</i> Multichain coverage</span><span><i>02</i> TEE-attested results</span><span><i>03</i> User-controlled execution</span></div>
           </div>
 
           <aside className="ritual-card" aria-label="Ritual execution status">
             <div className="ritual-card-head"><span className="ritual-glyph">R</span><div><strong>Ritual execution</strong><small>Native on-chain compute</small></div><span className="live-badge"><i /> LIVE</span></div>
             <div className="execution-flow">
-              <div className={jobActive && jobKind === "http" ? "flow-step current" : onchainFetchedAt > 0n ? "flow-step done" : "flow-step"}><span>⇄</span><div><strong>HTTP precompile</strong><small>0x0801 · Portfolio data</small></div><b>{jobActive && jobKind === "http" ? "RUN" : onchainFetchedAt > 0n ? "✓" : "READY"}</b></div>
+              <div className={jobActive && jobKind === "http" ? "flow-step current" : onchainFetchedAt > 0n ? "flow-step done" : "flow-step"}><span>01</span><div><strong>HTTP precompile</strong><small>0x0801 / Portfolio data</small></div><b>{jobActive && jobKind === "http" ? "RUNNING" : onchainFetchedAt > 0n ? "DONE" : "READY"}</b></div>
               <div className="flow-line" />
-              <div className={jobActive && jobKind === "llm" ? "flow-step current ai" : hasVerifiedAnalysis ? "flow-step done ai" : "flow-step ai"}><span>◇</span><div><strong>LLM precompile</strong><small>0x0802 · Risk reasoning</small></div><b>{jobActive && jobKind === "llm" ? "RUN" : hasVerifiedAnalysis ? "✓" : onchainSnapshot?.analysisError ? "RETRY" : "READY"}</b></div>
+              <div className={jobActive && jobKind === "llm" ? "flow-step current ai" : hasVerifiedAnalysis ? "flow-step done ai" : "flow-step ai"}><span>02</span><div><strong>LLM precompile</strong><small>0x0802 / Risk reasoning</small></div><b>{jobActive && jobKind === "llm" ? "RUNNING" : hasVerifiedAnalysis ? "DONE" : onchainSnapshot?.analysisError ? "RETRY" : "READY"}</b></div>
               <div className="flow-line" />
-              <div className="flow-step"><span>◷</span><div><strong>Scheduler</strong><small>Recurring intelligence</small></div><b>ROADMAP</b></div>
+              <div className="flow-step"><span>03</span><div><strong>Scheduler</strong><small>Recurring intelligence</small></div><b>PLANNED</b></div>
             </div>
-            <div className="tee-row"><span>◆</span><div><strong>Verifiable execution</strong><small>Every result is cryptographically tied to its request</small></div><a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer" aria-label="Read Ritual execution documentation">Learn ↗</a></div>
+            <div className="tee-row"><span>TEE</span><div><strong>Verifiable execution</strong><small>Every result is cryptographically tied to its request</small></div><a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer" aria-label="Read Ritual execution documentation">Learn more</a></div>
           </aside>
         </section>
 
-        {notice && <div className="notice" role="status"><span>i</span><p>{notice}</p>{latestTxHash && <a href={`https://explorer.ritualfoundation.org/tx/${latestTxHash}`} target="_blank" rel="noreferrer">View transaction ↗</a>}<button onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
+        {notice && <div className="notice" role="status" aria-live="polite"><span>Info</span><p>{notice}</p>{latestTxHash && <a href={`https://explorer.ritualfoundation.org/tx/${latestTxHash}`} target="_blank" rel="noreferrer">View transaction</a>}<button type="button" onClick={() => setNotice("")} aria-label="Dismiss notice">Close</button></div>}
 
         <section className="dashboard-heading">
-          <div><span className="section-index">01 / PORTFOLIO</span><h2>Intelligence overview</h2><button className="address-copy" onClick={copyPortfolioAddress} aria-label="Copy analyzed wallet address"><span>{snapshot.address}</span><b>{copied ? "Copied" : "Copy"}</b></button></div>
+          <div><span className="section-index">Portfolio intelligence</span><h2>Intelligence overview</h2><button type="button" className="address-copy" onClick={copyPortfolioAddress} aria-label="Copy analyzed wallet address"><span>{snapshot.address}</span><b>{copied ? "Copied" : "Copy address"}</b></button></div>
           <div className="dashboard-actions">
             <span className={`source-badge ${snapshot.source}`} title={snapshot.providerName}><i /> {snapshot.source === "demo" ? "Demo adapter" : snapshot.source === "zerion" ? "Zerion live" : snapshot.source === "debank" ? "DeBank live" : "Live indexed data"}</span>
-            <button className="outline-button" onClick={downloadReport}>↓ Export report</button>
-            <button className="outline-button primary" onClick={runOnchainAction} disabled={isSending || isSwitching || jobActive}>{onchainLabel}</button>
+            <button type="button" className="outline-button" onClick={downloadReport}>Export report</button>
+            <button type="button" className="outline-button primary" onClick={runOnchainAction} disabled={isSending || isSwitching || jobActive}>{onchainLabel}</button>
           </div>
         </section>
 
         <section className="portfolio-toolbar" aria-label="Portfolio workspace controls">
           <div className="view-tabs" role="tablist" aria-label="Portfolio views">
-            {(["overview", "assets", "activity"] as Tab[]).map((item) => <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}<span>{item === "assets" ? snapshot.assets.length : item === "activity" ? (jobTxHash ? 1 : 0) : ""}</span></button>)}
+            {(["overview", "assets", "activity"] as Tab[]).map((item) => <button type="button" key={item} id={`tab-${item}`} role="tab" aria-selected={tab === item} aria-controls={`panel-${item}`} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}<span>{item === "assets" ? snapshot.assets.length : item === "activity" ? (jobTxHash ? 1 : 0) : ""}</span></button>)}
           </div>
           <div className="freshness"><span>Last analyzed</span><strong>{new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong></div>
         </section>
 
-        {tab === "overview" && <>
+        {tab === "overview" && <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
           <section className="metrics-grid" aria-label="Portfolio metrics">
             <article className="metric-card value-card"><div className="metric-label">Portfolio value <span>USD</span></div><strong>{formatUsd(snapshot.totalValueUsd)}</strong>{hasMarketChangeData ? <p className={snapshot.change24h >= 0 ? "positive" : "negative"}>{snapshot.change24h >= 0 ? "↗" : "↘"} {Math.abs(snapshot.change24h)}% <small>vs. previous 24h</small></p> : <p><small>24h change unavailable from indexer</small></p>}<div className="sparkline" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
-            <article className="metric-card risk-card"><div className="metric-label">Risk score <span className={`risk-pill ${riskTone(analysis.riskScore)}`}>{analysis.riskLabel}</span></div><div className="risk-value"><strong>{analysis.riskScore}</strong><span>/100</span><b>{analysis.grade}</b></div><div className="risk-track"><i style={{ width: `${analysis.riskScore}%` }} /></div><p>Concentration and speculative exposure are the main drivers.</p></article>
-            <article className="metric-card position-card"><div className="metric-label">Largest position <span>{largestAsset?.chain ?? "No priced assets"}</span></div>{largestAsset ? <><div className="token-row"><span className="token-icon">Ξ</span><div><strong>{largestAsset.symbol}</strong><small>{largestAsset.name}</small></div><b>{largestAsset.allocation.toFixed(1)}%</b></div><div className="allocation-track"><i style={{ width: `${largestAsset.allocation}%` }} /></div></> : <div className="token-row"><div><strong>—</strong><small>Nothing material indexed</small></div></div>}</article>
+            <article className="metric-card risk-card"><div className="metric-label">Risk score <span className={`risk-pill ${riskTone(analysis.riskScore)}`}>{analysis.riskLabel}</span></div><div className="risk-value"><strong>{analysis.riskScore}</strong><span>/100</span><b>{analysis.grade}</b></div><div className="risk-track" role="progressbar" aria-label="Portfolio risk score" aria-valuemin={0} aria-valuemax={100} aria-valuenow={analysis.riskScore}><i style={{ width: `${analysis.riskScore}%` }} /></div><p>Concentration and speculative exposure are the main drivers.</p></article>
+            <article className="metric-card position-card"><div className="metric-label">Largest position <span>{largestAsset?.chain ?? "No priced assets"}</span></div>{largestAsset ? <><div className="token-row"><span className="token-icon" aria-hidden="true">{largestAsset.symbol.slice(0, 1)}</span><div><strong>{largestAsset.symbol}</strong><small>{largestAsset.name}</small></div><b>{largestAsset.allocation.toFixed(1)}%</b></div><div className="allocation-track" aria-hidden="true"><i style={{ width: `${largestAsset.allocation}%` }} /></div></> : <div className="token-row"><div><strong>No assets</strong><small>Nothing material indexed</small></div></div>}</article>
             <article className="metric-card exposure-card"><div className="metric-label">Exposure mix <span>{snapshot.assets.length} assets</span></div><div className="mini-stats"><div><span>Stable</span><strong>{snapshot.exposure.stablecoins}%</strong></div><div><span>DeFi</span><strong>{snapshot.exposure.defi}%</strong></div><div><span>Meme</span><strong>{snapshot.exposure.memecoins}%</strong></div><div title={snapshot.nftCount > 0 && snapshot.exposure.nfts === 0 ? "Indexed NFTs have no defensible USD price and are excluded from allocation." : undefined}><span>NFT</span><strong>{snapshot.exposure.nfts > 0 ? `${snapshot.exposure.nfts}%` : snapshot.nftCount > 0 ? `${snapshot.nftCount} held` : "0%"}</strong></div></div></article>
           </section>
 
           <section className="content-grid">
             <article className="panel allocation-panel">
-              <div className="panel-head"><div><span className="section-index">ALLOCATION</span><h3>Asset distribution</h3></div><button onClick={() => setTab("assets")}>View all →</button></div>
+              <div className="panel-head"><div><span className="section-index">Allocation</span><h3>Asset distribution</h3></div><button type="button" onClick={() => setTab("assets")}>View all assets</button></div>
               <div className="allocation-layout">
                 <div className="donut" style={{ background: chart ? `conic-gradient(${chart})` : "#111820" }}><div><strong>{snapshot.assets.length}</strong><span>assets</span></div></div>
                 <div className="asset-list">{snapshot.assets.slice(0, 5).map((asset) => <div key={asset.id}><i style={{ background: asset.color }} /><span>{asset.symbol}</span><div><b>{asset.allocation.toFixed(1)}%</b><small>{formatUsd(asset.valueUsd)}</small></div></div>)}</div>
@@ -503,28 +503,28 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
 
             <article className="panel ai-panel">
               <div className="ai-border" />
-              <div className="panel-head"><div><span className="section-index pink">◇ {hasVerifiedAnalysis ? "RITUAL AI ANALYSIS" : "EXPLAINABLE PREVIEW"}</span><h3>Portfolio intelligence</h3></div><span className="model-badge">{hasVerifiedAnalysis ? "GLM-4.7 · TEE" : "LOCAL SCORE"}</span></div>
+              <div className="panel-head"><div><span className="section-index">{hasVerifiedAnalysis ? "Ritual AI analysis" : "Explainable preview"}</span><h3>Portfolio intelligence</h3></div><span className="model-badge">{hasVerifiedAnalysis ? "GLM-4.7 / TEE" : "Local score"}</span></div>
               <p className="ai-summary">{analysis.summary}</p>
               {onchainSnapshot?.analysisError && <p className="executor-note"><strong>Ritual executor status</strong>The last on-chain LLM settlement returned an infrastructure error. Preview scoring remains available; use “Run verified AI” to retry when the registered executor recovers.</p>}
               <div className="observation-list">{analysis.observations.map((observation, index) => <div key={observation}><span>0{index + 1}</span><p>{observation}</p></div>)}</div>
-              <div className="analysis-meta"><span>{hasVerifiedAnalysis ? "◆ TEE verified on Ritual" : "◇ Preview · not yet on-chain"}</span><span>Updated {new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
+              <div className="analysis-meta"><span>{hasVerifiedAnalysis ? "TEE verified on Ritual" : "Preview / not yet on-chain"}</span><span>Updated {new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div>
             </article>
           </section>
 
           <section className="actions-section">
-            <div className="section-title-row"><div><span className="section-index">02 / RECOMMENDED ACTIONS</span><h2>Improve your position</h2></div><p>Prioritized by potential risk reduction</p></div>
-            <div className="action-grid">{analysis.actions.map((action, index) => <article key={action.title} className={`action-card impact-${action.impact}`}><div className="action-number">0{index + 1}</div><span className="impact-label">{action.impact} impact</span><h3>{action.title}</h3><p>{action.detail}</p><button onClick={() => reviewAction(action.title, action.detail)}>Review recommendation <span>→</span></button></article>)}</div>
+            <div className="section-title-row"><div><span className="section-index">Recommended actions</span><h2>Improve your position</h2></div><p>Prioritized by potential risk reduction</p></div>
+            <div className="action-grid">{analysis.actions.map((action, index) => <article key={action.title} className={`action-card impact-${action.impact}`}><div className="action-number">0{index + 1}</div><span className="impact-label">{action.impact} impact</span><h3>{action.title}</h3><p>{action.detail}</p><button type="button" onClick={() => reviewAction(action.title, action.detail)}>Review recommendation <span aria-hidden="true">→</span></button></article>)}</div>
           </section>
-        </>}
+        </div>}
 
-        {tab === "assets" && <section className="table-panel">
-          <div className="panel-head"><div><span className="section-index">ALL POSITIONS</span><h2>Asset inventory</h2></div><span>{formatUsd(snapshot.totalValueUsd)} total</span></div>
-          <div className="asset-table" role="table"><div className="table-row table-head" role="row"><span>Asset</span><span>Chain</span><span>Category</span><span>Value</span><span>Allocation</span><span>24h</span></div>{snapshot.assets.map((asset) => <div className="table-row" role="row" key={asset.id}><span><i style={{ background: asset.color }} /> <b>{asset.symbol}</b><small>{asset.name}</small></span><span>{asset.chain}</span><span><b className={`category-pill category-${asset.category}`}>{asset.category}</b></span><span>{formatUsd(asset.valueUsd)}</span><span className="table-allocation"><b>{asset.allocation.toFixed(1)}%</b><i><em style={{ width: `${asset.allocation}%`, background: asset.color }} /></i></span><span className={asset.change24h === null ? "" : asset.change24h >= 0 ? "positive" : "negative"}>{asset.change24h === null ? "—" : `${asset.change24h >= 0 ? "+" : ""}${asset.change24h}%`}</span></div>)}</div>
+        {tab === "assets" && <section id="panel-assets" role="tabpanel" aria-labelledby="tab-assets" className="table-panel">
+          <div className="panel-head"><div><span className="section-index">All positions</span><h2>Asset inventory</h2></div><span>{formatUsd(snapshot.totalValueUsd)} total</span></div>
+          <div className="asset-table" role="table" aria-label="Wallet asset inventory"><div role="rowgroup"><div className="table-row table-head" role="row"><span role="columnheader">Asset</span><span role="columnheader">Chain</span><span role="columnheader">Category</span><span role="columnheader">Value</span><span role="columnheader">Allocation</span><span role="columnheader">24h</span></div></div><div role="rowgroup">{snapshot.assets.map((asset) => <div className="table-row" role="row" key={asset.id}><span role="cell"><i style={{ background: asset.color }} /> <b>{asset.symbol}</b><small>{asset.name}</small></span><span role="cell">{asset.chain}</span><span role="cell"><b className={`category-pill category-${asset.category}`}>{asset.category}</b></span><span role="cell">{formatUsd(asset.valueUsd)}</span><span role="cell" className="table-allocation"><b>{asset.allocation.toFixed(1)}%</b><i aria-hidden="true"><em style={{ width: `${asset.allocation}%`, background: asset.color }} /></i></span><span role="cell" className={asset.change24h === null ? "" : asset.change24h >= 0 ? "positive" : "negative"}>{asset.change24h === null ? "Not available" : `${asset.change24h >= 0 ? "+" : ""}${asset.change24h}%`}</span></div>)}</div></div>
         </section>}
 
-        {tab === "activity" && <section className="activity-grid">
-          <article className="panel"><div className="panel-head"><div><span className="section-index">ASYNC LIFECYCLE</span><h2>Ritual job activity</h2></div><span className={`job-status ${jobActive ? "submitted" : "idle"}`}>{activityStatus}</span></div>{!jobTxHash && <div className="activity-empty"><span>◇</span><strong>Your execution history will appear here.</strong><p>Deposits are wallet operations, not AI jobs. Run an on-chain refresh to create a TEE-verified portfolio snapshot.</p><button onClick={runOnchainAction}>{address ? "Run first analysis" : "Connect to get started"}</button></div>}{jobTxHash && <div className="timeline">{["Submitted", "Committed", "Executor processing", "Settling", "Complete"].map((item, index) => { const completed = jobComplete || index === 0; const current = !jobComplete && !isJobFailed && index === 1; return <div className={completed ? "complete" : current ? "current" : "pending"} key={item}><i /> <span>{item}</span><small>{index === 0 ? `${jobKind === "llm" ? "LLM" : "HTTP"} transaction` : index === 1 ? "AsyncJobTracker" : index === 2 ? "TEE executor" : index === 3 ? "SPC replay" : isJobFailed ? "Execution failed" : "On-chain state"}</small></div>; })}</div>}</article>
-          <article className="panel wallet-status"><span className="section-index">EXECUTION WALLET</span><h2>RitualWallet</h2><dl><div><dt>Connected EOA</dt><dd>{compactAddress(address)}</dd></div><div><dt>Native balance</dt><dd>{!isRitualNetwork && address ? "Switch to Ritual" : nativeBalance ? `${Number(formatEther(nativeBalance.value)).toFixed(3)} RITUAL` : "—"}</dd></div><div><dt>Executor escrow</dt><dd>{!isRitualNetwork && address ? "Switch to Ritual" : escrowBalance !== undefined ? `${Number(formatEther(escrowBalance)).toFixed(3)} RITUAL` : "—"}</dd></div><div><dt>Lock until block</dt><dd>{!isRitualNetwork && address ? "Switch network" : lockUntil?.toString() ?? "—"}</dd></div><div><dt>Sender lock</dt><dd className={senderLocked ? "warn" : "ok"}>{!isRitualNetwork && address ? "Unknown" : senderLocked ? "Pending job" : "Available"}</dd></div></dl><button className="outline-button primary full" onClick={depositFees} disabled={!address || isSending || !isRitualNetwork}>Deposit 0.4 RITUAL</button><small className="wallet-hint">Covers the current ~0.31 RITUAL LLM estimate plus the HTTP step.</small></article>
+        {tab === "activity" && <section id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" className="activity-grid">
+          <article className="panel"><div className="panel-head"><div><span className="section-index">Async lifecycle</span><h2>Ritual job activity</h2></div><span className={`job-status ${jobActive ? "submitted" : "idle"}`}>{activityStatus}</span></div>{!jobTxHash && <div className="activity-empty"><span aria-hidden="true">01</span><strong>Your execution history will appear here.</strong><p>Deposits are wallet operations, not AI jobs. Run an on-chain refresh to create a TEE-verified portfolio snapshot.</p><button type="button" onClick={runOnchainAction}>{address ? "Run first analysis" : "Connect to get started"}</button></div>}{jobTxHash && <div className="timeline">{["Submitted", "Committed", "Executor processing", "Settling", "Complete"].map((item, index) => { const completed = jobComplete || index === 0; const current = !jobComplete && !isJobFailed && index === 1; return <div className={completed ? "complete" : current ? "current" : "pending"} key={item}><i /> <span>{item}</span><small>{index === 0 ? `${jobKind === "llm" ? "LLM" : "HTTP"} transaction` : index === 1 ? "AsyncJobTracker" : index === 2 ? "TEE executor" : index === 3 ? "SPC replay" : isJobFailed ? "Execution failed" : "On-chain state"}</small></div>; })}</div>}</article>
+          <article className="panel wallet-status"><span className="section-index">Execution wallet</span><h2>RitualWallet</h2><dl><div><dt>Connected EOA</dt><dd>{compactAddress(address)}</dd></div><div><dt>Native balance</dt><dd>{!isRitualNetwork && address ? "Switch to Ritual" : nativeBalance ? `${Number(formatEther(nativeBalance.value)).toFixed(3)} RITUAL` : "Not connected"}</dd></div><div><dt>Executor escrow</dt><dd>{!isRitualNetwork && address ? "Switch to Ritual" : escrowBalance !== undefined ? `${Number(formatEther(escrowBalance)).toFixed(3)} RITUAL` : "Not connected"}</dd></div><div><dt>Lock until block</dt><dd>{!isRitualNetwork && address ? "Switch network" : lockUntil?.toString() ?? "Not available"}</dd></div><div><dt>Sender lock</dt><dd className={senderLocked ? "warn" : "ok"}>{!isRitualNetwork && address ? "Unknown" : senderLocked ? "Pending job" : "Available"}</dd></div></dl><button type="button" className="outline-button primary full" onClick={depositFees} disabled={!address || isSending || !isRitualNetwork}>Deposit 0.4 RITUAL</button><small className="wallet-hint">Covers the current ~0.31 RITUAL LLM estimate plus the HTTP step.</small></article>
         </section>}
 
         <section className="architecture-strip">
