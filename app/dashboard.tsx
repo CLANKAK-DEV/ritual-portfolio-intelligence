@@ -174,7 +174,7 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
     try {
       setNotice("Confirm the RitualWallet deposit in your wallet.");
       const data = encodeFunctionData({ abi: walletDepositAbi, functionName: "deposit", args: [100_000n] });
-      const hash = await sendTransactionAsync({ to: RITUAL_ADDRESSES.wallet, data, value: parseEther("0.5") });
+      const hash = await sendTransactionAsync({ to: RITUAL_ADDRESSES.wallet, data, value: parseEther("0.01"), gas: 100_000n });
       setTxHash(hash);
       setNotice("Fee deposit submitted. It will appear after confirmation.");
     } catch (error) {
@@ -384,7 +384,7 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
 
         {tab === "activity" && <section className="activity-grid">
           <article className="panel"><div className="panel-head"><div><span className="section-index">ASYNC LIFECYCLE</span><h2>Ritual job activity</h2></div><span className={`job-status ${txHash ? "submitted" : "idle"}`}>{txHash ? "1 active job" : "No active jobs"}</span></div>{!txHash && <div className="activity-empty"><span>◇</span><strong>Your execution history will appear here.</strong><p>Connect a wallet and run an on-chain refresh to create a TEE-verified portfolio snapshot.</p><button onClick={runOnchainRefresh}>{address ? "Run first analysis" : "Connect to get started"}</button></div>}{txHash && <div className="timeline">{["Submitted", "Committed", "Executor processing", "Settling", "Complete"].map((item, index) => <div className={index === 0 ? "complete" : index === 1 ? "current" : "pending"} key={item}><i /> <span>{item}</span><small>{index === 0 ? "Wallet transaction" : index === 1 ? "AsyncJobTracker" : index === 2 ? "TEE executor" : index === 3 ? "SPC replay" : "On-chain state"}</small></div>)}</div>}</article>
-          <article className="panel wallet-status"><span className="section-index">EXECUTION WALLET</span><h2>RitualWallet</h2><dl><div><dt>Connected EOA</dt><dd>{compactAddress(address)}</dd></div><div><dt>Native balance</dt><dd>{nativeBalance ? Number(formatEther(nativeBalance.value)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Executor escrow</dt><dd>{escrowBalance !== undefined ? Number(formatEther(escrowBalance)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Lock until block</dt><dd>{lockUntil?.toString() ?? "—"}</dd></div><div><dt>Sender lock</dt><dd className={senderLocked ? "warn" : "ok"}>{senderLocked ? "Pending job" : "Available"}</dd></div></dl><button className="outline-button primary full" onClick={depositFees} disabled={!address || isSending}>Deposit 0.5 RITUAL</button></article>
+          <article className="panel wallet-status"><span className="section-index">EXECUTION WALLET</span><h2>RitualWallet</h2><dl><div><dt>Connected EOA</dt><dd>{compactAddress(address)}</dd></div><div><dt>Native balance</dt><dd>{nativeBalance ? Number(formatEther(nativeBalance.value)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Executor escrow</dt><dd>{escrowBalance !== undefined ? Number(formatEther(escrowBalance)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Lock until block</dt><dd>{lockUntil?.toString() ?? "—"}</dd></div><div><dt>Sender lock</dt><dd className={senderLocked ? "warn" : "ok"}>{senderLocked ? "Pending job" : "Available"}</dd></div></dl><button className="outline-button primary full" onClick={depositFees} disabled={!address || isSending}>Deposit 0.01 RITUAL</button></article>
         </section>}
 
         <section className="architecture-strip">

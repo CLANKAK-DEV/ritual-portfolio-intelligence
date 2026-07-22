@@ -14,6 +14,16 @@ A hackathon-ready wallet intelligence product built natively on Ritual Chain. It
 
 The full system design and trust boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Live Ritual deployment
+
+- Network: Ritual testnet (`1979`)
+- Portfolio consumer: `0x04ed63b72e0683185dbeeba7eac8c597f41d61ce`
+- Deployment transaction: `0x65ec2ae519991cb0d25f979950105cd667570ce91db1c627ea9ed42b36d13909`
+- Deployment block: `49252106`
+- Deployer RitualWallet escrow: `0.01 RITUAL`
+
+The web app is configured to use this deployment. The portfolio endpoint must be publicly reachable before a Ritual HTTP executor can settle a live refresh.
+
 ## Run locally
 
 Requirements: Node.js 22.13+ and npm.

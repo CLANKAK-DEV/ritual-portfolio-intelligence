@@ -13,6 +13,7 @@
     "contracts:compile": "hardhat --config contracts/hardhat.config.ts compile",
     "contracts:deploy": "hardhat --config contracts/hardhat.config.ts run contracts/scripts/deploy.ts --network ritual",
     "ritual:check": "node scripts/check-ritual.mjs",
+    "ritual:create-deployer": "node scripts/create-deployer.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern contracts/artifacts --ignore-pattern contracts/cache --ignore-pattern .codex --ignore-pattern .ritual-build",
     "db:generate": "drizzle-kit generate"
   },
