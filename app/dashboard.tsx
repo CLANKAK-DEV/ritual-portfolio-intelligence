@@ -106,6 +106,7 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
   const [notice, setNotice] = useState("");
   const [txHash, setTxHash] = useState<string>();
   const [mobileNav, setMobileNav] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { address, chainId, isConnected } = useAccount();
   const { connectors, connect, isPending: isConnecting } = useConnect();
@@ -182,7 +183,18 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
   }
 
   async function runOnchainRefresh() {
-    if (!address || !publicClient) return;
+    if (!address) {
+      if (connectors[0]) {
+        connect({ connector: connectors[0] });
+      } else {
+        setNotice("Install or unlock an EVM wallet to submit a verifiable Ritual execution. Preview analysis stays signature-free.");
+      }
+      return;
+    }
+    if (!publicClient) {
+      setNotice("Ritual RPC is not ready yet. Please try again in a moment.");
+      return;
+    }
     if (!contractAddress) {
       setNotice("Deploy the included contract and set NEXT_PUBLIC_PORTFOLIO_CONTRACT to enable on-chain refresh.");
       return;
@@ -228,6 +240,29 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
     URL.revokeObjectURL(url);
   }
 
+  async function copyPortfolioAddress() {
+    await navigator.clipboard.writeText(snapshot.address);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  function reviewAction(title: string, detail: string) {
+    setNotice(`${title}: ${detail} This recommendation is informational and requires your approval.`);
+    window.setTimeout(() => document.querySelector(".notice")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+  }
+
+  const isRitualNetwork = chainId === ritualChain.id;
+  const hasContract = Boolean(contractAddress);
+  const onchainLabel = isSending
+    ? "Submitting…"
+    : !address
+      ? "Connect to execute"
+      : !hasContract
+        ? "Preview mode"
+        : !isRitualNetwork
+          ? "Switch to Ritual"
+          : "Run on Ritual";
+
   const connectButton = isConnected ? (
     <button className="wallet-button connected" onClick={() => disconnect()} aria-label="Disconnect wallet">
       <span className="status-dot" /> {compactAddress(address)}
@@ -253,7 +288,7 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
           <a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer">Ritual docs ↗</a>
         </nav>
         <div className="top-actions">
-          <span className="network-pill"><span /> Ritual testnet</span>
+          <span className={`network-pill ${isConnected && !isRitualNetwork ? "wrong-network" : ""}`}><span /> {isConnected && !isRitualNetwork ? "Wrong network" : "Ritual testnet"}</span>
           {connectButton}
           <button className="menu-button" onClick={() => setMobileNav((value) => !value)} aria-expanded={mobileNav} aria-label="Toggle navigation">☰</button>
         </div>
@@ -262,20 +297,21 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
       <main id="main">
         <section className="hero-grid">
           <div className="hero-copy">
-            <div className="eyebrow"><span>◇</span> TEE-verified portfolio intelligence</div>
+            <div className="eyebrow"><span>◇</span> TEE-verified portfolio intelligence <b>LIVE BETA</b></div>
             <h1>Your portfolio,<br /><em>interpreted on-chain.</em></h1>
-            <p>Ritual fetches live wallet data, reasons over the complete allocation, and preserves every analysis as verifiable on-chain history.</p>
+            <p>Turn a wallet address into clear, defensible portfolio intelligence—powered by Ritual&apos;s native internet access and verifiable AI execution.</p>
             <form className="wallet-search" onSubmit={runPreview}>
               <label htmlFor="wallet-address">Wallet address</label>
               <div className="search-row">
                 <span className="search-icon">⌕</span>
                 <input id="wallet-address" value={walletInput} onChange={(event) => setWalletInput(event.target.value)} spellCheck={false} aria-describedby="wallet-help" />
-                <button type="submit" disabled={pipeline === "fetching" || pipeline === "reasoning"}>
+                <button type="submit" disabled={pipeline === "fetching" || pipeline === "reasoning"} aria-live="polite">
                   {pipeline === "fetching" ? "Fetching" : pipeline === "reasoning" ? "Reasoning" : "Analyze"} <span>→</span>
                 </button>
               </div>
-              <small id="wallet-help">Read-only analysis. No signature required for preview.</small>
+              <div className="search-meta"><small id="wallet-help">Read-only preview. No signature required.</small><button type="button" onClick={() => setWalletInput(initialSnapshot.address)}>Use demo wallet</button></div>
             </form>
+            <div className="trust-row" aria-label="Product guarantees"><span><i>01</i> Multichain view</span><span><i>02</i> TEE-attested</span><span><i>03</i> User-controlled</span></div>
           </div>
 
           <aside className="ritual-card" aria-label="Ritual execution status">
@@ -287,24 +323,31 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
               <div className="flow-line" />
               <div className="flow-step"><span>◷</span><div><strong>Scheduler</strong><small>Recurring intelligence</small></div><b>24H</b></div>
             </div>
-            <div className="tee-row"><span>◆</span><div><strong>TEE verified</strong><small>Results cryptographically tied to the request</small></div></div>
+            <div className="tee-row"><span>◆</span><div><strong>Verifiable execution</strong><small>Every result is cryptographically tied to its request</small></div><a href="https://docs.ritualfoundation.org" target="_blank" rel="noreferrer" aria-label="Read Ritual execution documentation">Learn ↗</a></div>
           </aside>
         </section>
 
         {notice && <div className="notice" role="status"><span>i</span><p>{notice}</p>{txHash && <a href={`https://explorer.ritualfoundation.org/tx/${txHash}`} target="_blank" rel="noreferrer">View transaction ↗</a>}<button onClick={() => setNotice("")} aria-label="Dismiss notice">×</button></div>}
 
         <section className="dashboard-heading">
-          <div><span className="section-index">01 / PORTFOLIO</span><h2>Intelligence overview</h2><p className="mono-address">{snapshot.address}</p></div>
+          <div><span className="section-index">01 / PORTFOLIO</span><h2>Intelligence overview</h2><button className="address-copy" onClick={copyPortfolioAddress} aria-label="Copy analyzed wallet address"><span>{snapshot.address}</span><b>{copied ? "Copied" : "Copy"}</b></button></div>
           <div className="dashboard-actions">
             <span className={`source-badge ${snapshot.source}`}><i /> {snapshot.source === "provider" ? "Live provider" : "Demo adapter"}</span>
             <button className="outline-button" onClick={downloadReport}>↓ Export report</button>
-            <button className="outline-button primary" onClick={runOnchainRefresh} disabled={isSending || isSwitching}>{isSending ? "Submitting…" : "Run on Ritual"}</button>
+            <button className="outline-button primary" onClick={runOnchainRefresh} disabled={isSending || isSwitching}>{onchainLabel}</button>
           </div>
+        </section>
+
+        <section className="portfolio-toolbar" aria-label="Portfolio workspace controls">
+          <div className="view-tabs" role="tablist" aria-label="Portfolio views">
+            {(["overview", "assets", "activity"] as Tab[]).map((item) => <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}<span>{item === "assets" ? snapshot.assets.length : item === "activity" ? (txHash ? 1 : 0) : ""}</span></button>)}
+          </div>
+          <div className="freshness"><span>Last analyzed</span><strong>{new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong></div>
         </section>
 
         {tab === "overview" && <>
           <section className="metrics-grid" aria-label="Portfolio metrics">
-            <article className="metric-card value-card"><div className="metric-label">Portfolio value <span>USD</span></div><strong>{formatUsd(snapshot.totalValueUsd)}</strong><p className={snapshot.change24h >= 0 ? "positive" : "negative"}>{snapshot.change24h >= 0 ? "↗" : "↘"} {Math.abs(snapshot.change24h)}% <small>24 hours</small></p><div className="sparkline"><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
+            <article className="metric-card value-card"><div className="metric-label">Portfolio value <span>USD</span></div><strong>{formatUsd(snapshot.totalValueUsd)}</strong><p className={snapshot.change24h >= 0 ? "positive" : "negative"}>{snapshot.change24h >= 0 ? "↗" : "↘"} {Math.abs(snapshot.change24h)}% <small>vs. previous 24h</small></p><div className="sparkline" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div></article>
             <article className="metric-card risk-card"><div className="metric-label">Risk score <span className={`risk-pill ${riskTone(analysis.riskScore)}`}>{analysis.riskLabel}</span></div><div className="risk-value"><strong>{analysis.riskScore}</strong><span>/100</span><b>{analysis.grade}</b></div><div className="risk-track"><i style={{ width: `${analysis.riskScore}%` }} /></div><p>Concentration and speculative exposure are the main drivers.</p></article>
             <article className="metric-card position-card"><div className="metric-label">Largest position <span>{snapshot.assets[0].chain}</span></div><div className="token-row"><span className="token-icon">Ξ</span><div><strong>{snapshot.assets[0].symbol}</strong><small>{snapshot.assets[0].name}</small></div><b>{snapshot.assets[0].allocation.toFixed(1)}%</b></div><div className="allocation-track"><i style={{ width: `${snapshot.assets[0].allocation}%` }} /></div></article>
             <article className="metric-card exposure-card"><div className="metric-label">Exposure mix <span>{snapshot.assets.length} assets</span></div><div className="mini-stats"><div><span>Stable</span><strong>{snapshot.exposure.stablecoins}%</strong></div><div><span>DeFi</span><strong>{snapshot.exposure.defi}%</strong></div><div><span>Meme</span><strong>{snapshot.exposure.memecoins}%</strong></div><div><span>NFT</span><strong>{snapshot.exposure.nfts}%</strong></div></div></article>
@@ -330,17 +373,17 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
 
           <section className="actions-section">
             <div className="section-title-row"><div><span className="section-index">02 / RECOMMENDED ACTIONS</span><h2>Improve your position</h2></div><p>Prioritized by potential risk reduction</p></div>
-            <div className="action-grid">{analysis.actions.map((action, index) => <article key={action.title} className={`action-card impact-${action.impact}`}><div className="action-number">0{index + 1}</div><span className="impact-label">{action.impact} impact</span><h3>{action.title}</h3><p>{action.detail}</p><button>Review strategy <span>→</span></button></article>)}</div>
+            <div className="action-grid">{analysis.actions.map((action, index) => <article key={action.title} className={`action-card impact-${action.impact}`}><div className="action-number">0{index + 1}</div><span className="impact-label">{action.impact} impact</span><h3>{action.title}</h3><p>{action.detail}</p><button onClick={() => reviewAction(action.title, action.detail)}>Review recommendation <span>→</span></button></article>)}</div>
           </section>
         </>}
 
         {tab === "assets" && <section className="table-panel">
           <div className="panel-head"><div><span className="section-index">ALL POSITIONS</span><h2>Asset inventory</h2></div><span>{formatUsd(snapshot.totalValueUsd)} total</span></div>
-          <div className="asset-table" role="table"><div className="table-row table-head" role="row"><span>Asset</span><span>Chain</span><span>Category</span><span>Value</span><span>Allocation</span><span>24h</span></div>{snapshot.assets.map((asset) => <div className="table-row" role="row" key={asset.symbol}><span><i style={{ background: asset.color }} /> <b>{asset.symbol}</b><small>{asset.name}</small></span><span>{asset.chain}</span><span>{asset.category}</span><span>{formatUsd(asset.valueUsd)}</span><span>{asset.allocation.toFixed(1)}%</span><span className={asset.change24h >= 0 ? "positive" : "negative"}>{asset.change24h >= 0 ? "+" : ""}{asset.change24h}%</span></div>)}</div>
+          <div className="asset-table" role="table"><div className="table-row table-head" role="row"><span>Asset</span><span>Chain</span><span>Category</span><span>Value</span><span>Allocation</span><span>24h</span></div>{snapshot.assets.map((asset) => <div className="table-row" role="row" key={asset.symbol}><span><i style={{ background: asset.color }} /> <b>{asset.symbol}</b><small>{asset.name}</small></span><span>{asset.chain}</span><span><b className={`category-pill category-${asset.category}`}>{asset.category}</b></span><span>{formatUsd(asset.valueUsd)}</span><span className="table-allocation"><b>{asset.allocation.toFixed(1)}%</b><i><em style={{ width: `${asset.allocation}%`, background: asset.color }} /></i></span><span className={asset.change24h >= 0 ? "positive" : "negative"}>{asset.change24h >= 0 ? "+" : ""}{asset.change24h}%</span></div>)}</div>
         </section>}
 
         {tab === "activity" && <section className="activity-grid">
-          <article className="panel"><span className="section-index">ASYNC LIFECYCLE</span><h2>Ritual job activity</h2><div className="timeline">{["Submitted", "Committed", "Executor processing", "Settling", "Complete"].map((item, index) => <div className={index < 4 ? "complete" : "current"} key={item}><i /> <span>{item}</span><small>{index === 0 ? "Wallet transaction" : index === 1 ? "AsyncJobTracker" : index === 2 ? "TEE executor" : index === 3 ? "SPC replay" : "On-chain state"}</small></div>)}</div></article>
+          <article className="panel"><div className="panel-head"><div><span className="section-index">ASYNC LIFECYCLE</span><h2>Ritual job activity</h2></div><span className={`job-status ${txHash ? "submitted" : "idle"}`}>{txHash ? "1 active job" : "No active jobs"}</span></div>{!txHash && <div className="activity-empty"><span>◇</span><strong>Your execution history will appear here.</strong><p>Connect a wallet and run an on-chain refresh to create a TEE-verified portfolio snapshot.</p><button onClick={runOnchainRefresh}>{address ? "Run first analysis" : "Connect to get started"}</button></div>}{txHash && <div className="timeline">{["Submitted", "Committed", "Executor processing", "Settling", "Complete"].map((item, index) => <div className={index === 0 ? "complete" : index === 1 ? "current" : "pending"} key={item}><i /> <span>{item}</span><small>{index === 0 ? "Wallet transaction" : index === 1 ? "AsyncJobTracker" : index === 2 ? "TEE executor" : index === 3 ? "SPC replay" : "On-chain state"}</small></div>)}</div>}</article>
           <article className="panel wallet-status"><span className="section-index">EXECUTION WALLET</span><h2>RitualWallet</h2><dl><div><dt>Connected EOA</dt><dd>{compactAddress(address)}</dd></div><div><dt>Native balance</dt><dd>{nativeBalance ? Number(formatEther(nativeBalance.value)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Executor escrow</dt><dd>{escrowBalance !== undefined ? Number(formatEther(escrowBalance)).toFixed(3) : "—"} RITUAL</dd></div><div><dt>Lock until block</dt><dd>{lockUntil?.toString() ?? "—"}</dd></div><div><dt>Sender lock</dt><dd className={senderLocked ? "warn" : "ok"}>{senderLocked ? "Pending job" : "Available"}</dd></div></dl><button className="outline-button primary full" onClick={depositFees} disabled={!address || isSending}>Deposit 0.5 RITUAL</button></article>
         </section>}
 
