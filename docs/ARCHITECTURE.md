@@ -2,7 +2,7 @@
 
 ## Product
 
-Ritual Portfolio Intelligence is a wallet-risk copilot that turns multichain portfolio data into verifiable, recurring on-chain analysis. The first release supports a demo data source out of the box and a provider adapter for production portfolio APIs.
+Ritual Portfolio Intelligence is a wallet-risk copilot that turns multichain portfolio data into verifiable, recurring on-chain analysis. The first release indexes priced Ethereum and Arbitrum positions through Blockscout and supports a configurable provider override.
 
 ## Ritual projection
 
@@ -31,8 +31,9 @@ HTTP and LLM are two separate short-running async calls because Ritual allows on
 
 ## Trust and persistence
 
-- Portfolio aggregation happens behind the public portfolio endpoint; Ritual's HTTP executor attests the exact response used by the contract.
+- The browser preview aggregates priced Ethereum and Arbitrum positions. The on-chain HTTP step independently attests Blockscout's public Ethereum token-balance response.
 - Analysis is produced by Ritual's native LLM executor in a TEE and the result is written by the fulfilled transaction replay.
+- The contract builds the 30-field LLM request itself from the stored HTTP payload, so browser-supplied content cannot be substituted for the attested source.
 - The contract stores content hashes plus the latest payloads and emits a complete event trail. A production indexer can retain full history without making the contract an expensive database.
 - No user private key, provider API key, or secret is committed to source control. Deployment and provider credentials are injected through environment variables.
 
@@ -49,6 +50,5 @@ The contract schedules only HTTP refreshes. The LLM analysis is a separate trans
 - Only the owner can change the API base URL or create/cancel schedules.
 - Callback injection is not used for short-running HTTP/LLM calls; results are decoded during fulfilled replay.
 - Scheduler callbacks require `msg.sender` to be the canonical Scheduler.
-- API URLs are assembled from an owner-controlled HTTPS base and a validated EVM address.
+- API URLs are assembled from an owner-controlled HTTPS prefix, a validated EVM address, and an owner-controlled suffix.
 - LLM output is treated as untrusted bytes; the UI validates the expected JSON shape and falls back to a safe summary.
-

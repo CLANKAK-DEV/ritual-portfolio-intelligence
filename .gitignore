@@ -44,5 +44,6 @@ next-env.d.ts
 /work/
 /.codex/skills/
 /.ritual-build/
+/.ritual-dev.*.log
 /contracts/artifacts/
 /contracts/cache/

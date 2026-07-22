@@ -7,7 +7,7 @@ A hackathon-ready wallet intelligence product built natively on Ritual Chain. It
 ## What is included
 
 - A responsive, accessible portfolio dashboard with wallet connection, risk scoring, exposure analysis, actions, JSON export, and async lifecycle UI.
-- A normalized portfolio API with a deterministic demo adapter and a configurable production-provider adapter.
+- A normalized, keyless live-data adapter for Ethereum and Arbitrum through Blockscout, plus support for a configurable production provider.
 - `PortfolioIntelligence.sol`, which requests portfolio data through Ritual HTTP, sends structured prompts through Ritual LLM, stores hashes/results on-chain, emits indexable events, and schedules recurring refreshes.
 - RitualWallet fee deposit controls, sender-lock checks, and live HTTP executor discovery in the frontend.
 - Hardhat deployment, codec tests, SSR tests, linting, and a read-only Ritual network health check.
@@ -17,12 +17,12 @@ The full system design and trust boundaries are documented in [docs/ARCHITECTURE
 ## Live Ritual deployment
 
 - Network: Ritual testnet (`1979`)
-- Portfolio consumer: `0x04ed63b72e0683185dbeeba7eac8c597f41d61ce`
-- Deployment transaction: `0x65ec2ae519991cb0d25f979950105cd667570ce91db1c627ea9ed42b36d13909`
-- Deployment block: `49252106`
-- Deployer RitualWallet escrow: `0.01 RITUAL`
+- Portfolio consumer: `0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c`
+- Deployment transaction: `0x563ea65e375769eb93d43ac01d3208a4b730e9a3e617869e3714d37f256339fa`
+- Deployment block: `49262540`
+- Deployer RitualWallet escrow: funded on Ritual testnet for deployment verification
 
-The web app is configured to use this deployment. The portfolio endpoint must be publicly reachable before a Ritual HTTP executor can settle a live refresh.
+The web app is configured to use this deployment. Its HTTP step reads Blockscout's public Ethereum token-balance endpoint directly, so a Ritual executor can settle a live refresh even while this dashboard remains owner-only.
 
 ## Run locally
 
@@ -34,11 +34,11 @@ copy .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:3000`. Without a provider key, any valid EVM address produces a stable demo snapshot so judges can explore the complete product immediately.
+Open `http://localhost:3000`. Any valid EVM address loads indexed, priced Ethereum and Arbitrum positions without an API key. Unpriced, spam, and dust balances are excluded instead of being assigned invented values.
 
 ## Configure live portfolio data
 
-Set `PORTFOLIO_API_URL_TEMPLATE` to an HTTPS endpoint that returns a normalized object with `totalValueUsd` and an `assets` array. The route replaces `{address}` and can pass `PORTFOLIO_API_KEY` as a bearer token. Unsupported or unavailable responses fall back to the demo adapter.
+The built-in adapter uses Blockscout's public v2 address and token-balance APIs. To override it, set `PORTFOLIO_API_URL_TEMPLATE` to an HTTPS endpoint that returns a normalized object with `totalValueUsd` and an `assets` array. The route replaces `{address}` and can pass `PORTFOLIO_API_KEY` as a bearer token. If all indexers are unavailable, the API returns an explicit `503` and never substitutes fake holdings.
 
 ## Verify
 
@@ -56,7 +56,7 @@ npm run ritual:check
 
 1. Copy `.env.example` to `.env` and use a newly created deployer. Never paste or commit a private key.
 2. Fund the deployer with Ritual testnet RITUAL.
-3. Set `PRIVATE_KEY`, `RITUAL_RPC_URL`, and `PORTFOLIO_API_BASE_URL`. The API base must be public HTTPS and end in `?address=`.
+3. Set `PRIVATE_KEY`, `RITUAL_RPC_URL`, `PORTFOLIO_API_BASE_URL`, and (when needed) `PORTFOLIO_API_URL_SUFFIX`. The contract builds requests as `base + wallet + suffix` and the endpoint must be public HTTPS.
 4. Run `npm run contracts:deploy`.
 5. Put the printed address in `NEXT_PUBLIC_PORTFOLIO_CONTRACT`, rebuild, and redeploy the web app.
 6. Deposit executor fees into RitualWallet from the dashboard before submitting HTTP or LLM jobs.

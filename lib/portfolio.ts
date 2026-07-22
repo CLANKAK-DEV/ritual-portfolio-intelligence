@@ -1,13 +1,14 @@
 export type AssetCategory = "bluechip" | "stablecoin" | "defi" | "meme" | "nft" | "other";
 
 export type PortfolioAsset = {
+  id: string;
   symbol: string;
   name: string;
   chain: string;
   category: AssetCategory;
   valueUsd: number;
   allocation: number;
-  change24h: number;
+  change24h: number | null;
   color: string;
 };
 
@@ -24,7 +25,8 @@ export type PortfolioSnapshot = {
   };
   chains: { name: string; allocation: number }[];
   updatedAt: string;
-  source: "demo" | "provider";
+  source: "demo" | "provider" | "blockscout";
+  providerName: string;
 };
 
 export type PortfolioAnalysis = {
@@ -54,6 +56,7 @@ export function makeDemoSnapshot(address: string): PortfolioSnapshot {
   }));
   const totalValueUsd = values.reduce((sum, item) => sum + item.valueUsd, 0);
   const assets = values.map((asset) => ({
+    id: `${asset.chain.toLowerCase()}:${asset.symbol.toLowerCase()}`,
     symbol: asset.symbol,
     name: asset.name,
     chain: asset.chain,
@@ -83,10 +86,30 @@ export function makeDemoSnapshot(address: string): PortfolioSnapshot {
     ],
     updatedAt: new Date().toISOString(),
     source: "demo",
+    providerName: "Demo adapter",
   };
 }
 
 export function analyzeSnapshot(snapshot: PortfolioSnapshot): PortfolioAnalysis {
+  if (snapshot.assets.length === 0 || snapshot.totalValueUsd <= 0) {
+    return {
+      riskScore: 0,
+      grade: "N/A",
+      riskLabel: "Low",
+      summary: "No priced assets were found on the supported Ethereum and Arbitrum networks. Unpriced, spam, and dust tokens are excluded from the risk model.",
+      observations: [
+        "No material priced ERC-20 or native-token balance is currently visible.",
+        "NFTs without a reliable market price are not assigned an invented USD value.",
+        "Add another wallet address or return after the indexer has processed recent transfers.",
+      ],
+      actions: [
+        { title: "Review supported networks", detail: "This MVP currently indexes Ethereum and Arbitrum through Blockscout.", impact: "low" },
+        { title: "Verify recent transfers", detail: "Recently confirmed assets may take a short time to appear in explorer indexes.", impact: "low" },
+        { title: "Keep valuation defensible", detail: "Unpriced and suspicious tokens remain excluded instead of inflating portfolio value.", impact: "low" },
+      ],
+    };
+  }
+
   const largest = snapshot.assets[0];
   const concentration = Math.max(...snapshot.assets.map((asset) => asset.allocation));
   const riskScore = Math.min(
@@ -107,7 +130,7 @@ export function analyzeSnapshot(snapshot: PortfolioSnapshot): PortfolioAnalysis 
     observations: [
       `${largest.symbol} is the largest single position and the main driver of portfolio volatility.`,
       `DeFi exposure is ${snapshot.exposure.defi.toFixed(1)}% across ${snapshot.assets.filter((asset) => asset.category === "defi").length} protocols.`,
-      `The portfolio spans ${snapshot.chains.length} active networks; Ethereum represents ${snapshot.chains[0].allocation.toFixed(1)}%.`,
+      `The portfolio spans ${snapshot.chains.length} active network${snapshot.chains.length === 1 ? "" : "s"}; ${snapshot.chains[0].name} represents ${snapshot.chains[0].allocation.toFixed(1)}%.`,
     ],
     actions: [
       {

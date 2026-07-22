@@ -56,6 +56,7 @@ contract PortfolioIntelligence {
 
     address public owner;
     string public apiBaseUrl;
+    string public apiUrlSuffix;
     uint256 public activeScheduleId;
     mapping(address => Snapshot) private snapshots;
 
@@ -67,10 +68,12 @@ contract PortfolioIntelligence {
     error PrecompileCallFailed(address precompile);
     error HTTPRequestFailed(uint16 status, string reason);
     error MissingPortfolio();
+    error PortfolioTooLarge(uint256 bytesLength);
     error FeeWithdrawalLocked(uint256 lockUntilBlock);
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event ApiBaseUrlUpdated(string previousUrl, string newUrl);
+    event ApiUrlSuffixUpdated(string previousSuffix, string newSuffix);
     event PortfolioFetched(
         address indexed wallet,
         bytes32 indexed portfolioHash,
@@ -100,9 +103,10 @@ contract PortfolioIntelligence {
         _;
     }
 
-    constructor(string memory initialApiBaseUrl) {
+    constructor(string memory initialApiBaseUrl, string memory initialApiUrlSuffix) {
         owner = msg.sender;
         _setApiBaseUrl(initialApiBaseUrl);
+        apiUrlSuffix = initialApiUrlSuffix;
         emit OwnershipTransferred(address(0), msg.sender);
     }
 
@@ -117,6 +121,13 @@ contract PortfolioIntelligence {
     /// @notice Changes the HTTPS endpoint used by Ritual HTTP executors.
     function setApiBaseUrl(string calldata newUrl) external onlyOwner {
         _setApiBaseUrl(newUrl);
+    }
+
+    /// @notice Changes the path appended after the wallet address in HTTP requests.
+    function setApiUrlSuffix(string calldata newSuffix) external onlyOwner {
+        string memory previous = apiUrlSuffix;
+        apiUrlSuffix = newSuffix;
+        emit ApiUrlSuffixUpdated(previous, newSuffix);
     }
 
     /// @notice Deposits caller-owned execution fees into RitualWallet.
@@ -156,13 +167,15 @@ contract PortfolioIntelligence {
     }
 
     /// @notice Runs Ritual-native LLM analysis over the latest stored portfolio.
-    /// @param llmInput Canonical 30-field Ritual LLM request encoded off-chain.
     function analyzePortfolio(
         address wallet,
-        bytes calldata llmInput,
+        address llmExecutor,
         string calldata model
     ) external {
-        if (snapshots[wallet].portfolioJson.length == 0) revert MissingPortfolio();
+        bytes memory portfolioJson = snapshots[wallet].portfolioJson;
+        if (portfolioJson.length == 0) revert MissingPortfolio();
+        if (portfolioJson.length > 6_000) revert PortfolioTooLarge(portfolioJson.length);
+        bytes memory llmInput = _encodeLlmInput(llmExecutor, model, portfolioJson);
 
         (bool ok, bytes memory rawOutput) = LLM_PRECOMPILE.call(llmInput);
         if (!ok) revert PrecompileCallFailed(LLM_PRECOMPILE);
@@ -256,7 +269,7 @@ contract PortfolioIntelligence {
 
     function _refreshPortfolio(address wallet, address httpExecutor, uint256 executionIndex) internal {
         if (wallet == address(0) || httpExecutor == address(0)) revert InvalidAddress();
-        string memory url = string.concat(apiBaseUrl, _addressToHex(wallet));
+        string memory url = string.concat(apiBaseUrl, _addressToHex(wallet), apiUrlSuffix);
 
         string[] memory headerKeys = new string[](1);
         string[] memory headerValues = new string[](1);
@@ -334,6 +347,90 @@ contract PortfolioIntelligence {
             (string, string, string, uint256, bytes[])
         );
         return content;
+    }
+
+    function _encodeLlmInput(
+        address llmExecutor,
+        string calldata model,
+        bytes memory portfolioJson
+    ) internal pure returns (bytes memory) {
+        if (llmExecutor == address(0)) revert InvalidAddress();
+        string memory messages = string.concat(
+            '[{"role":"system","content":"You are a cautious portfolio risk analyst. Return only valid JSON with keys riskScore, grade, riskLabel, summary, observations, and actions. Never provide financial advice."},',
+            '{"role":"user","content":"Analyze this TEE-fetched wallet payload: ',
+            _escapeJsonString(portfolioJson),
+            '"}]'
+        );
+        return abi.encode(
+            llmExecutor,
+            new bytes[](0),
+            uint256(300),
+            new bytes[](0),
+            bytes(""),
+            messages,
+            model,
+            int256(0),
+            "",
+            false,
+            int256(4096),
+            "",
+            "",
+            uint256(1),
+            true,
+            int256(0),
+            "medium",
+            _responseFormatData(),
+            int256(-1),
+            "auto",
+            "",
+            false,
+            int256(700),
+            bytes(""),
+            bytes(""),
+            int256(-1),
+            int256(1000),
+            "",
+            false,
+            StorageRef("", "", "")
+        );
+    }
+
+    function _responseFormatData() internal pure returns (bytes memory) {
+        string memory schema = '{"type":"object","properties":{"riskScore":{"type":"integer","minimum":0,"maximum":100},"grade":{"type":"string"},"riskLabel":{"type":"string","enum":["Low","Moderate","Elevated","High"]},"summary":{"type":"string"},"observations":{"type":"array","items":{"type":"string"}},"actions":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"detail":{"type":"string"},"impact":{"type":"string","enum":["high","medium","low"]}},"required":["title","detail","impact"]}}},"required":["riskScore","grade","riskLabel","summary","observations","actions"]}';
+        bytes memory jsonSchema = abi.encode(
+            "portfolio_analysis",
+            "Risk analysis for a wallet portfolio",
+            schema,
+            "true"
+        );
+        return abi.encode("json_schema", jsonSchema);
+    }
+
+    function _escapeJsonString(bytes memory input) internal pure returns (string memory) {
+        bytes memory output = new bytes(input.length * 2);
+        uint256 length;
+        for (uint256 i = 0; i < input.length; ++i) {
+            bytes1 char = input[i];
+            if (char == bytes1('"') || char == bytes1('\\')) {
+                output[length++] = bytes1('\\');
+                output[length++] = char;
+            } else if (char == bytes1('\n')) {
+                output[length++] = bytes1('\\');
+                output[length++] = bytes1('n');
+            } else if (char == bytes1('\r')) {
+                output[length++] = bytes1('\\');
+                output[length++] = bytes1('r');
+            } else if (char == bytes1('\t')) {
+                output[length++] = bytes1('\\');
+                output[length++] = bytes1('t');
+            } else {
+                output[length++] = char;
+            }
+        }
+        assembly {
+            mstore(output, length)
+        }
+        return string(output);
     }
 
     function _setApiBaseUrl(string memory newUrl) internal {
