@@ -1,0 +1,43 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { Archivo_Black, Barlow, JetBrains_Mono } from "next/font/google";
+import { Providers } from "./providers";
+import "./globals.css";
+
+const display = Archivo_Black({ weight: "400", subsets: ["latin"], variable: "--font-display" });
+const body = Barlow({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-body" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const base = new URL(`${protocol}://${host}`);
+  return {
+    metadataBase: base,
+    title: { default: "Ritual Portfolio Intelligence", template: "%s · Ritual Portfolio Intelligence" },
+    description: "Verifiable, recurring portfolio analysis powered by Ritual's native HTTP, LLM, and Scheduler primitives.",
+    openGraph: {
+      title: "Ritual Portfolio Intelligence",
+      description: "Your portfolio, interpreted on-chain.",
+      type: "website",
+      images: [{ url: new URL("/og.png", base).toString(), width: 1792, height: 1024, alt: "Ritual Portfolio Intelligence" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Ritual Portfolio Intelligence",
+      description: "Your portfolio, interpreted on-chain.",
+      images: [new URL("/og.png", base).toString()],
+    },
+  };
+}
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en">
+      <body className={`${display.variable} ${body.variable} ${mono.variable}`}>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}

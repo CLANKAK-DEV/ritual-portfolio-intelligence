@@ -1,0 +1,52 @@
+{
+  "name": "ritual-portfolio-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "test": "vitest run --config vitest.config.ts && node --test tests/rendered-html.test.mjs",
+    "contracts:compile": "hardhat --config contracts/hardhat.config.ts compile",
+    "contracts:deploy": "hardhat --config contracts/hardhat.config.ts run contracts/scripts/deploy.ts --network ritual",
+    "ritual:check": "node scripts/check-ritual.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern contracts/artifacts --ignore-pattern contracts/cache --ignore-pattern .codex --ignore-pattern .ritual-build",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.101.4",
+    "drizzle-orm": "0.45.2",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "viem": "2.55.5",
+    "wagmi": "2.19.5",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@nomicfoundation/hardhat-viem": "3.0.9",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "dotenv": "17.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "hardhat": "3.11.0",
+    "react-server-dom-webpack": "19.2.6",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "8.0.13",
+    "vitest": "4.1.10",
+    "wrangler": "4.92.0"
+  },
+  "type": "module"
+}
