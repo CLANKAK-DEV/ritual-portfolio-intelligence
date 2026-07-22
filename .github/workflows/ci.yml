@@ -32,11 +32,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm test
-
       - name: Compile contracts
         run: npm run contracts:compile
 
       - name: Build application
         run: npm run build
+
+      - name: Test
+        run: npm test
