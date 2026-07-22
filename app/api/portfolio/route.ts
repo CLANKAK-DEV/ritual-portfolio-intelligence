@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { makeDemoSnapshot, type AssetCategory, type PortfolioAsset, type PortfolioSnapshot } from "@/lib/portfolio";
+import { type AssetCategory, type PortfolioAsset, type PortfolioSnapshot } from "@/lib/portfolio";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "edge";
 
@@ -106,6 +107,57 @@ const memes = new Set(["PEPE", "SHIB", "DOGE", "FLOKI", "BONK", "WIF", "MOG", "B
 const colors = ["#19D184", "#BFFF00", "#FF1DCE", "#36A3FF", "#FACC15", "#8B5CF6", "#F97316", "#14B8A6"];
 const debankBaseUrl = "https://pro-openapi.debank.com/v1";
 const zerionBaseUrl = "https://api.zerion.io/v1";
+const PROVIDER_TIMEOUT_MS = 10_000;
+const MAX_PROVIDER_RESPONSE_BYTES = 2 * 1_024 * 1_024;
+const portfolioHeaders = {
+  "Cache-Control": "public, max-age=30, s-maxage=30, stale-while-revalidate=300",
+  "X-Content-Type-Options": "nosniff",
+};
+
+async function readBoundedJson<T>(response: Response, provider: string): Promise<T> {
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new Error(`${provider} response exceeded the safety limit`);
+  }
+  const body = await response.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new Error(`${provider} response exceeded the safety limit`);
+  }
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new Error(`${provider} returned malformed JSON`);
+  }
+}
+
+function responseHeaders(source: string, rateLimitHeaders: Record<string, string>) {
+  return { ...portfolioHeaders, ...rateLimitHeaders, "X-Portfolio-Source": source };
+}
+
+function isPrivateHostname(hostname: string) {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (normalized === "localhost" || normalized === "::1" || normalized.endsWith(".local") || normalized.endsWith(".internal")) return true;
+  const octets = normalized.split(".").map(Number);
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb");
+  }
+  const [first, second] = octets;
+  return first === 0 || first === 10 || first === 127 || first >= 224 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168);
+}
+
+function configuredProviderUrl(template: string, address: string) {
+  if ((template.match(/\{address\}/g) ?? []).length !== 1) return null;
+  try {
+    const url = new URL(template.replace("{address}", encodeURIComponent(address)));
+    if (url.protocol !== "https:" || url.username || url.password || isPrivateHostname(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 function finiteNumber(value: unknown) {
   const number = Number(value);
@@ -158,9 +210,10 @@ async function fetchDeBank<T>(path: string, accessKey: string): Promise<T> {
   const response = await fetch(`${debankBaseUrl}${path}`, {
     headers: { Accept: "application/json", AccessKey: accessKey },
     cf: { cacheTtl: 30 },
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
   } as RequestInit);
   if (!response.ok) throw new Error(`DeBank returned ${response.status}`);
-  return response.json() as Promise<T>;
+  return readBoundedJson<T>(response, "DeBank");
 }
 
 function readableChainName(id?: string) {
@@ -186,10 +239,11 @@ async function fetchZerion<T>(path: string, apiKey: string, acceptPending = fals
   const response = await fetch(`${zerionBaseUrl}${path}`, {
     headers: { Accept: "application/json", Authorization: authorization },
     cf: { cacheTtl: 30 },
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
   } as RequestInit);
   if (acceptPending && response.status === 202) return null;
   if (!response.ok) throw new Error(`Zerion returned ${response.status}`);
-  return response.json() as Promise<T>;
+  return readBoundedJson<T>(response, "Zerion");
 }
 
 async function makeZerionSnapshot(address: string, apiKey: string): Promise<PortfolioSnapshot> {
@@ -427,9 +481,13 @@ function tokenAmount(raw: string | null | undefined, decimals: string | null | u
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { headers: { Accept: "application/json" }, cf: { cacheTtl: 30 } } as RequestInit);
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    cf: { cacheTtl: 30 },
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+  } as RequestInit);
   if (!response.ok) throw new Error(`Blockscout returned ${response.status}`);
-  return response.json() as Promise<T>;
+  return readBoundedJson<T>(response, "Blockscout");
 }
 
 async function fetchNetwork(address: string, network: (typeof networks)[number]) {
@@ -514,27 +572,77 @@ async function makeBlockscoutSnapshot(address: string, isFallback = false): Prom
 function normalizeProviderPayload(address: string, payload: unknown): PortfolioSnapshot | null {
   if (!payload || typeof payload !== "object") return null;
   const candidate = payload as Partial<PortfolioSnapshot>;
-  if (!Array.isArray(candidate.assets) || typeof candidate.totalValueUsd !== "number") return null;
+  if (!Array.isArray(candidate.assets) || candidate.assets.length > 100) return null;
+  const validCategories = new Set<AssetCategory>(["bluechip", "stablecoin", "defi", "meme", "nft", "other"]);
+  const rawAssets: Omit<PortfolioAsset, "allocation" | "color">[] = [];
+  for (const entry of candidate.assets) {
+    if (!entry || typeof entry !== "object") continue;
+    const asset = entry as Partial<PortfolioAsset>;
+    if (
+      typeof asset.id !== "string" || typeof asset.symbol !== "string" ||
+      typeof asset.name !== "string" || typeof asset.chain !== "string" ||
+      typeof asset.valueUsd !== "number" || !Number.isFinite(asset.valueUsd) || asset.valueUsd < 0 ||
+      typeof asset.category !== "string" || !validCategories.has(asset.category as AssetCategory)
+    ) continue;
+    rawAssets.push({
+      id: asset.id.slice(0, 128),
+      symbol: asset.symbol.trim().toUpperCase().slice(0, 18) || "ASSET",
+      name: asset.name.trim().slice(0, 64) || "Asset",
+      chain: asset.chain.trim().slice(0, 48) || "Unknown",
+      category: asset.category as AssetCategory,
+      valueUsd: asset.valueUsd,
+      change24h: typeof asset.change24h === "number" && Number.isFinite(asset.change24h)
+        ? Math.max(-100, Math.min(100_000, asset.change24h))
+        : null,
+    });
+  }
+  const { assets, totalValueUsd } = finalizeAssets(rawAssets);
+  const chainMap = new Map<string, number>();
+  for (const asset of assets) chainMap.set(asset.chain, (chainMap.get(asset.chain) ?? 0) + asset.allocation);
   return {
-    ...makeDemoSnapshot(address),
-    ...candidate,
     address,
+    totalValueUsd,
+    change24h: typeof candidate.change24h === "number" && Number.isFinite(candidate.change24h)
+      ? Math.max(-100, Math.min(100_000, candidate.change24h))
+      : 0,
+    assets,
+    exposure: {
+      stablecoins: categoryAllocation(assets, "stablecoin"),
+      defi: categoryAllocation(assets, "defi"),
+      memecoins: categoryAllocation(assets, "meme"),
+      nfts: categoryAllocation(assets, "nft"),
+    },
+    chains: [...chainMap.entries()]
+      .map(([name, allocation]) => ({ name, allocation: Number(allocation.toFixed(1)) }))
+      .sort((a, b) => b.allocation - a.allocation),
+    nftCount: Number.isSafeInteger(candidate.nftCount) ? Math.max(0, Math.min(1_000_000, candidate.nftCount ?? 0)) : 0,
+    protocolCount: Number.isSafeInteger(candidate.protocolCount) ? Math.max(0, Math.min(10_000, candidate.protocolCount ?? 0)) : 0,
     updatedAt: new Date().toISOString(),
     source: "provider",
     providerName: "Configured portfolio provider",
-  } as PortfolioSnapshot;
+  };
 }
 
 export async function GET(request: Request) {
+  const rateLimit = checkRateLimit(request, "portfolio", 30, 60_000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Too many portfolio requests. Please retry shortly." }, {
+      status: 429,
+      headers: { ...portfolioHeaders, ...rateLimit.headers },
+    });
+  }
   const url = new URL(request.url);
   const address = url.searchParams.get("address") ?? "";
-  if (!isAddress(address)) return NextResponse.json({ error: "A valid EVM wallet address is required." }, { status: 400 });
+  if (!isAddress(address)) return NextResponse.json(
+    { error: "A valid EVM wallet address is required." },
+    { status: 400, headers: { ...portfolioHeaders, ...rateLimit.headers } },
+  );
 
   const zerionApiKey = process.env.ZERION_API_KEY;
   if (zerionApiKey) {
     try {
       return NextResponse.json(await makeZerionSnapshot(address, zerionApiKey), {
-        headers: { "Cache-Control": "public, max-age=30", "X-Portfolio-Source": "zerion" },
+        headers: responseHeaders("zerion", rateLimit.headers),
       });
     } catch {
       // Rate limits, authorization, and temporary outages fall through safely.
@@ -545,7 +653,7 @@ export async function GET(request: Request) {
   if (debankAccessKey) {
     try {
       return NextResponse.json(await makeDeBankSnapshot(address, debankAccessKey), {
-        headers: { "Cache-Control": "public, max-age=30", "X-Portfolio-Source": "debank" },
+        headers: responseHeaders("debank", rateLimit.headers),
       });
     } catch {
       // A missing unit balance, IP restriction, or temporary outage falls through safely.
@@ -555,13 +663,16 @@ export async function GET(request: Request) {
   const providerTemplate = process.env.PORTFOLIO_API_URL_TEMPLATE;
   if (providerTemplate) {
     try {
-      const response = await fetch(providerTemplate.replace("{address}", address), {
+      const providerUrl = configuredProviderUrl(providerTemplate, address);
+      if (!providerUrl) throw new Error("Configured portfolio provider URL is not safe");
+      const response = await fetch(providerUrl, {
         headers: process.env.PORTFOLIO_API_KEY ? { Authorization: `Bearer ${process.env.PORTFOLIO_API_KEY}`, Accept: "application/json" } : { Accept: "application/json" },
         cf: { cacheTtl: 30 },
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       } as RequestInit);
       if (response.ok) {
-        const normalized = normalizeProviderPayload(address, await response.json());
-        if (normalized) return NextResponse.json(normalized, { headers: { "Cache-Control": "public, max-age=30", "X-Portfolio-Source": "provider" } });
+        const normalized = normalizeProviderPayload(address, await readBoundedJson(response, "Configured provider"));
+        if (normalized) return NextResponse.json(normalized, { headers: responseHeaders("provider", rateLimit.headers) });
       }
     } catch {
       // Continue to the public, keyless Blockscout adapter.
@@ -570,9 +681,12 @@ export async function GET(request: Request) {
 
   try {
     return NextResponse.json(await makeBlockscoutSnapshot(address, Boolean(zerionApiKey || debankAccessKey)), {
-      headers: { "Cache-Control": "public, max-age=30", "X-Portfolio-Source": "blockscout" },
+      headers: responseHeaders("blockscout", rateLimit.headers),
     });
   } catch {
-    return NextResponse.json({ error: "Portfolio indexers are temporarily unavailable. No demo values were substituted." }, { status: 503 });
+    return NextResponse.json({ error: "Portfolio indexers are temporarily unavailable. No demo values were substituted." }, {
+      status: 503,
+      headers: { ...portfolioHeaders, ...rateLimit.headers },
+    });
   }
 }

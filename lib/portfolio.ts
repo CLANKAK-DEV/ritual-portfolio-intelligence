@@ -40,6 +40,49 @@ export type PortfolioAnalysis = {
   actions: { title: string; detail: string; impact: "high" | "medium" | "low" }[];
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function boundedString(value: unknown, maximumLength: number) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= maximumLength ? normalized : null;
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]) {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
+export function parsePortfolioAnalysis(value: unknown): PortfolioAnalysis | null {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["riskScore", "grade", "riskLabel", "summary", "observations", "actions"])) return null;
+  if (typeof value.riskScore !== "number" || !Number.isInteger(value.riskScore) || value.riskScore < 0 || value.riskScore > 100) return null;
+  const grade = boundedString(value.grade, 8);
+  const summary = boundedString(value.summary, 1_500);
+  const riskLabels: PortfolioAnalysis["riskLabel"][] = ["Low", "Moderate", "Elevated", "High"];
+  if (!grade || !summary || !riskLabels.includes(value.riskLabel as PortfolioAnalysis["riskLabel"])) return null;
+  if (!Array.isArray(value.observations) || value.observations.length > 8) return null;
+  const observations = value.observations.map((item) => boundedString(item, 500));
+  if (observations.some((item) => item === null)) return null;
+  if (!Array.isArray(value.actions) || value.actions.length > 8) return null;
+  const actions: PortfolioAnalysis["actions"] = [];
+  for (const item of value.actions) {
+    if (!isRecord(item) || !hasOnlyKeys(item, ["title", "detail", "impact"])) return null;
+    const title = boundedString(item.title, 120);
+    const detail = boundedString(item.detail, 700);
+    if (!title || !detail || !["high", "medium", "low"].includes(item.impact as string)) return null;
+    actions.push({ title, detail, impact: item.impact as "high" | "medium" | "low" });
+  }
+  return {
+    riskScore: value.riskScore,
+    grade,
+    riskLabel: value.riskLabel as PortfolioAnalysis["riskLabel"],
+    summary,
+    observations: observations as string[],
+    actions,
+  };
+}
+
 const assetSeed = [
   { symbol: "ETH", name: "Ethereum", chain: "Ethereum", category: "bluechip" as const, base: 7420, change24h: 3.8, color: "#19D184" },
   { symbol: "USDC", name: "USD Coin", chain: "Ethereum", category: "stablecoin" as const, base: 2525, change24h: 0.02, color: "#BFFF00" },

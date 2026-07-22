@@ -14,9 +14,11 @@ const forbiddenEnvironmentFiles = tracked.filter((file) => {
 
 const rules = [
   ["private-key assignment", /\bPRIVATE_KEY[ \t]*=[ \t]*(?:0x)?[0-9a-fA-F]{64}\b/],
+  ["mnemonic assignment", /\b(?:MNEMONIC|SEED_PHRASE)[ \t]*=[ \t]*[^\r\n]{20,}/i],
   ["provider-key assignment", /\b(?:ZERION_API_KEY|DEBANK_ACCESS_KEY|PORTFOLIO_API_KEY)[ \t]*=[ \t]*\S+/],
   ["hard-coded Zerion key", /\bzk_[A-Za-z0-9]{20,}\b/],
   ["GitHub credential", /\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/],
+  ["npm credential", /\bnpm_[A-Za-z0-9]{20,}\b/],
   ["AWS access key", /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/],
   ["PEM private key", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
 ];
@@ -36,6 +38,19 @@ for (const file of tracked) {
 }
 
 for (const file of forbiddenEnvironmentFiles) findings.push({ file, rule: "tracked environment file" });
+
+try {
+  const history = execFileSync(
+    "git",
+    ["log", "-p", "--all", "--no-color", "--no-ext-diff"],
+    { encoding: "utf8", maxBuffer: 64 * 1_024 * 1_024 },
+  );
+  for (const [name, pattern] of rules) {
+    if (pattern.test(history)) findings.push({ file: "reachable Git history", rule: name });
+  }
+} catch {
+  // A new repository may not have a commit yet; current-tree checks still run.
+}
 
 if (findings.length > 0) {
   console.error("Potential secrets detected. Values are intentionally hidden:");

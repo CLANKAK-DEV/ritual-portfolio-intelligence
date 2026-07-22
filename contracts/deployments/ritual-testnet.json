@@ -2,10 +2,10 @@
   "chainId": 1979,
   "network": "Ritual Testnet",
   "contract": "PortfolioIntelligence",
-  "address": "0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c",
+  "address": "0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b",
   "deployer": "0x0746f0FAea4662acA75f831650e2Aa2D063FFfcd",
-  "transactionHash": "0x563ea65e375769eb93d43ac01d3208a4b730e9a3e617869e3714d37f256339fa",
-  "blockNumber": 49262540,
+  "transactionHash": "0xb202a2ccefa2d29511698be3485774a75b6ddd082a1996a4b85b4425b8e176b1",
+  "blockNumber": 49290205,
   "apiBaseUrl": "https://eth.blockscout.com/api/v2/addresses/",
   "apiUrlSuffix": "/token-balances"
 }

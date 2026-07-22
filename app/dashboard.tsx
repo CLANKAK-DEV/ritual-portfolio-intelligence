@@ -19,7 +19,7 @@ import {
   useSwitchChain,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { analyzeSnapshot, type PortfolioAnalysis, type PortfolioSnapshot } from "@/lib/portfolio";
+import { analyzeSnapshot, parsePortfolioAnalysis, type PortfolioAnalysis, type PortfolioSnapshot } from "@/lib/portfolio";
 import { RITUAL_ADDRESSES, ritualChain } from "@/lib/ritual";
 
 type Tab = "overview" | "assets" | "activity";
@@ -195,9 +195,11 @@ export function Dashboard({ initialSnapshot, initialAnalysis }: { initialSnapsho
       }
       if (jobKind === "llm" && refreshed?.analysisJson) {
         try {
-          setAnalysis(JSON.parse(refreshed.analysisJson) as PortfolioAnalysis);
+          const parsed = parsePortfolioAnalysis(JSON.parse(refreshed.analysisJson));
+          if (!parsed) throw new Error("Invalid analysis schema");
+          setAnalysis(parsed);
         } catch {
-          setNotice("Verified AI execution completed, but its response was not valid portfolio JSON. The on-chain hash remains available.");
+          setNotice("Verified AI execution completed, but its response did not match the bounded portfolio schema. The on-chain hash remains available.");
           return;
         }
       }

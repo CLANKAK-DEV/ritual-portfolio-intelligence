@@ -78,7 +78,7 @@ Depositing funds does not start an analysis. It only prepares executor fees. The
 ## Live deployment
 
 - Dashboard: <https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site>
-- Verified contract: <https://explorer.ritualfoundation.org/address/0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c>
+- Ritual testnet contract: <https://explorer.ritualfoundation.org/address/0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b>
 - Ritual network: testnet, chain ID `1979`
 
 The dashboard may require owner access until it is made public for the final hackathon submission.

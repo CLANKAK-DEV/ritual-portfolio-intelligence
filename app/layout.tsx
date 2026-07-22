@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Archivo_Black, Barlow, JetBrains_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -9,10 +8,14 @@ const body = Barlow({ weight: ["400", "500", "600", "700"], subsets: ["latin"], 
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const base = new URL(`${protocol}://${host}`);
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site";
+  let base = new URL("https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site");
+  try {
+    const candidate = new URL(configuredUrl);
+    if (candidate.protocol === "https:" && !candidate.username && !candidate.password) base = candidate;
+  } catch {
+    // A malformed environment value must not make untrusted request headers canonical.
+  }
   return {
     metadataBase: base,
     title: { default: "Ritual Portfolio Intelligence", template: "%s · Ritual Portfolio Intelligence" },

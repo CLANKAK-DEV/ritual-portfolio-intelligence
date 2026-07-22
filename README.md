@@ -17,9 +17,9 @@ Start with the [simple project guide](docs/PROJECT_GUIDE.md). The full system de
 ## Live Ritual deployment
 
 - Network: Ritual testnet (`1979`)
-- Verified portfolio consumer: [`0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c`](https://explorer.ritualfoundation.org/address/0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c)
-- Deployment transaction: `0x563ea65e375769eb93d43ac01d3208a4b730e9a3e617869e3714d37f256339fa`
-- Deployment block: `49262540`
+- Portfolio consumer: [`0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b`](https://explorer.ritualfoundation.org/address/0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b)
+- Deployment transaction: [`0xb202a2ccefa2d29511698be3485774a75b6ddd082a1996a4b85b4425b8e176b1`](https://explorer.ritualfoundation.org/tx/0xb202a2ccefa2d29511698be3485774a75b6ddd082a1996a4b85b4425b8e176b1)
+- Deployment block: `49290205`
 - Deployer RitualWallet escrow: funded on Ritual testnet for deployment verification
 
 The web app is configured to use this deployment. Its HTTP step reads Blockscout's public Ethereum token-balance endpoint directly, so a Ritual executor can settle a live refresh even while this dashboard remains owner-only.
@@ -55,10 +55,13 @@ npm test
 npm run lint
 npm run typecheck
 npm run security:check
+npm run security:audit
 npm run ritual:check
 ```
 
 `ritual:check` is read-only. It verifies chain ID 1979, the canonical system-contract bytecode, and current HTTP executor availability.
+
+The completed security review is available in [security-report.md](security-report.md), with a machine-readable copy in [security-report.json](security-report.json) and the applied unified diff in [security-fixes.patch](security-fixes.patch).
 
 ## Deploy the contract
 
