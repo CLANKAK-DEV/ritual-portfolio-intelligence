@@ -7,7 +7,7 @@ A hackathon-ready wallet intelligence product built natively on Ritual Chain. It
 ## What is included
 
 - A responsive, accessible portfolio dashboard with wallet connection, risk scoring, exposure analysis, actions, JSON export, and async lifecycle UI.
-- A normalized, keyless live-data adapter for Ethereum and Arbitrum through Blockscout, plus support for a configurable production provider.
+- A server-side Zerion adapter for multichain balances, 24-hour change, DeFi positions, and priced NFTs, with DeBank Pro and keyless Blockscout fallbacks.
 - `PortfolioIntelligence.sol`, which requests portfolio data through Ritual HTTP, sends structured prompts through Ritual LLM, stores hashes/results on-chain, emits indexable events, and schedules recurring refreshes.
 - RitualWallet fee deposit controls, sender-lock checks, and live HTTP executor discovery in the frontend.
 - Hardhat deployment, codec tests, SSR tests, linting, and a read-only Ritual network health check.
@@ -34,11 +34,17 @@ copy .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:3000`. Any valid EVM address loads indexed, priced Ethereum and Arbitrum positions without an API key. Unpriced, spam, and dust balances are excluded instead of being assigned invented values.
+Open `http://localhost:3000`. With `ZERION_API_KEY` configured, any valid EVM address loads indexed fungible, DeFi, and NFT positions across Zerion's supported chains. DeBank Pro is the secondary provider when `DEBANK_ACCESS_KEY` has units, and Blockscout supplies a keyless Ethereum/Arbitrum fallback. Unpriced, suspicious, and dust balances are excluded instead of being assigned invented values.
 
 ## Configure live portfolio data
 
-The built-in adapter uses Blockscout's public v2 address and token-balance APIs. To override it, set `PORTFOLIO_API_URL_TEMPLATE` to an HTTPS endpoint that returns a normalized object with `totalValueUsd` and an `assets` array. The route replaces `{address}` and can pass `PORTFOLIO_API_KEY` as a bearer token. If all indexers are unavailable, the API returns an explicit `503` and never substitutes fake holdings.
+Set `ZERION_API_KEY` to enable the primary Zerion adapter. The key is read only by the server route, converted to Basic Authentication on the server, and must never use a `NEXT_PUBLIC_` prefix. The adapter requests fungible/DeFi positions, portfolio change, and NFT positions. It respects the Demo plan's low request rate by sequencing upstream calls and caches normalized responses for 30 seconds.
+
+Set `DEBANK_ACCESS_KEY` to enable the secondary DeBank Pro adapter. It requests total balance, wallet tokens, simple protocol positions, and verified NFTs; it uses DeBank's `usd_price` only when present and never invents NFT values.
+
+The keyless Blockscout v2 adapter is the automatic fallback. A normalized provider override remains available through `PORTFOLIO_API_URL_TEMPLATE`; the route replaces `{address}` and can pass `PORTFOLIO_API_KEY` as a bearer token. If every indexer is unavailable, the API returns an explicit `503` and never substitutes demo holdings.
+
+The Ritual contract intentionally receives neither private provider key. Its HTTP-precompile request uses a public Blockscout URL because transaction inputs are public and must not contain third-party credentials.
 
 ## Verify
 

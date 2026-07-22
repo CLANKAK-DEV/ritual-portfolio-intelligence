@@ -24,8 +24,10 @@ export type PortfolioSnapshot = {
     nfts: number;
   };
   chains: { name: string; allocation: number }[];
+  nftCount: number;
+  protocolCount: number;
   updatedAt: string;
-  source: "demo" | "provider" | "blockscout";
+  source: "demo" | "provider" | "zerion" | "debank" | "blockscout";
   providerName: string;
 };
 
@@ -84,6 +86,8 @@ export function makeDemoSnapshot(address: string): PortfolioSnapshot {
       { name: "Ethereum", allocation: Number(assets.filter((asset) => asset.chain === "Ethereum").reduce((sum, asset) => sum + asset.allocation, 0).toFixed(1)) },
       { name: "Arbitrum", allocation: Number(assets.filter((asset) => asset.chain === "Arbitrum").reduce((sum, asset) => sum + asset.allocation, 0).toFixed(1)) },
     ],
+    nftCount: 7,
+    protocolCount: 2,
     updatedAt: new Date().toISOString(),
     source: "demo",
     providerName: "Demo adapter",
@@ -99,11 +103,13 @@ export function analyzeSnapshot(snapshot: PortfolioSnapshot): PortfolioAnalysis 
       summary: "No priced assets were found on the supported Ethereum and Arbitrum networks. Unpriced, spam, and dust tokens are excluded from the risk model.",
       observations: [
         "No material priced ERC-20 or native-token balance is currently visible.",
-        "NFTs without a reliable market price are not assigned an invented USD value.",
+        snapshot.nftCount > 0
+          ? `${snapshot.nftCount} NFT${snapshot.nftCount === 1 ? " is" : "s are"} indexed; only positions with a defensible USD price affect exposure.`
+          : "NFTs without a reliable market price are not assigned an invented USD value.",
         "Add another wallet address or return after the indexer has processed recent transfers.",
       ],
       actions: [
-        { title: "Review supported networks", detail: "This MVP currently indexes Ethereum and Arbitrum through Blockscout.", impact: "low" },
+        { title: "Review indexed networks", detail: snapshot.source === "debank" ? "DeBank covers supported EVM chains; confirm recent positions after indexing completes." : "The fallback adapter currently indexes Ethereum and Arbitrum through Blockscout.", impact: "low" },
         { title: "Verify recent transfers", detail: "Recently confirmed assets may take a short time to appear in explorer indexes.", impact: "low" },
         { title: "Keep valuation defensible", detail: "Unpriced and suspicious tokens remain excluded instead of inflating portfolio value.", impact: "low" },
       ],

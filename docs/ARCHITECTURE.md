@@ -2,7 +2,7 @@
 
 ## Product
 
-Ritual Portfolio Intelligence is a wallet-risk copilot that turns multichain portfolio data into verifiable, recurring on-chain analysis. The first release indexes priced Ethereum and Arbitrum positions through Blockscout and supports a configurable provider override.
+Ritual Portfolio Intelligence is a wallet-risk copilot that turns multichain portfolio data into verifiable, recurring on-chain analysis. The web preview uses Zerion server-side for supported-chain balances, 24-hour change, DeFi positions, and priced NFTs. DeBank Pro and Blockscout provide layered fallbacks.
 
 ## Ritual projection
 
@@ -31,7 +31,8 @@ HTTP and LLM are two separate short-running async calls because Ritual allows on
 
 ## Trust and persistence
 
-- The browser preview aggregates priced Ethereum and Arbitrum positions. The on-chain HTTP step independently attests Blockscout's public Ethereum token-balance response.
+- The browser preview calls a same-origin server route. That route keeps Zerion and DeBank credentials private, aggregates multichain positions, and falls back without substituting demo holdings.
+- The on-chain HTTP step independently attests Blockscout's public Ethereum token-balance response. It does not use keyed providers because HTTP-precompile request data is public and cannot safely carry private credentials.
 - Analysis is produced by Ritual's native LLM executor in a TEE and the result is written by the fulfilled transaction replay.
 - The contract builds the 30-field LLM request itself from the stored HTTP payload, so browser-supplied content cannot be substituted for the attested source.
 - The contract stores content hashes plus the latest payloads and emits a complete event trail. A production indexer can retain full history without making the contract an expensive database.

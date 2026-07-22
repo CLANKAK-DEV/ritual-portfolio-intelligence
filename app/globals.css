@@ -87,7 +87,7 @@ main { width: min(1400px, calc(100% - clamp(2rem, 8vw, 9rem))); margin: 0 auto; 
 .dashboard-heading { padding: 4.2rem 0 1.6rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; }
 .dashboard-heading h2, .section-title-row h2, .architecture-strip h2, .table-panel h2, .activity-grid h2 { color: var(--white); font: 400 clamp(1.7rem, 3vw, 2.6rem)/1.1 var(--font-display); letter-spacing: -.03em; margin: .55rem 0 .5rem; }
 .mono-address { margin: 0; color: #788395; font: .67rem var(--font-mono); }.dashboard-actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; justify-content: flex-end; }
-.source-badge { display: flex; gap: .45rem; align-items: center; color: var(--muted); }.source-badge.provider, .source-badge.blockscout { color: var(--green); }
+.source-badge { display: flex; gap: .45rem; align-items: center; color: var(--muted); }.source-badge.provider, .source-badge.zerion, .source-badge.debank, .source-badge.blockscout { color: var(--green); }
 .outline-button { min-height: 40px; padding: 0 1rem; border: 1px solid #3b4656; background: transparent; color: var(--text); cursor: pointer; font-size: .76rem; font-weight: 600; }
 .outline-button:hover { border-color: var(--muted); }.outline-button.primary { border-color: var(--green); color: var(--green); }.outline-button.primary:hover { background: rgba(25,209,132,.08); box-shadow: 0 0 24px rgba(25,209,132,.09); }.outline-button:disabled { opacity: .45; cursor: not-allowed; }
 
