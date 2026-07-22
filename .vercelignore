@@ -4,6 +4,7 @@
 .vinext
 .wrangler
 .ritual-build
+.codex-mobile-preview
 .codex
 .vercel
 node_modules
