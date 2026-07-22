@@ -10,6 +10,8 @@
     "build": "vinext build",
     "start": "vinext start",
     "test": "vitest run --config vitest.config.ts && node --test tests/rendered-html.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "security:check": "node scripts/check-secrets.mjs",
     "contracts:compile": "hardhat --config contracts/hardhat.config.ts compile",
     "contracts:deploy": "hardhat --config contracts/hardhat.config.ts run contracts/scripts/deploy.ts --network ritual",
     "ritual:check": "node scripts/check-ritual.mjs",

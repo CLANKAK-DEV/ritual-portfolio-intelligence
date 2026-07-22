@@ -12,12 +12,12 @@ A hackathon-ready wallet intelligence product built natively on Ritual Chain. It
 - RitualWallet fee deposit controls, sender-lock checks, and live HTTP executor discovery in the frontend.
 - Hardhat deployment, codec tests, SSR tests, linting, and a read-only Ritual network health check.
 
-The full system design and trust boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Start with the [simple project guide](docs/PROJECT_GUIDE.md). The full system design and trust boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and credential-handling rules are in [SECURITY.md](SECURITY.md).
 
 ## Live Ritual deployment
 
 - Network: Ritual testnet (`1979`)
-- Portfolio consumer: `0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c`
+- Verified portfolio consumer: [`0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c`](https://explorer.ritualfoundation.org/address/0x17cb86d588e1eb924b4fdaac0a0ec2f4cd220b4c)
 - Deployment transaction: `0x563ea65e375769eb93d43ac01d3208a4b730e9a3e617869e3714d37f256339fa`
 - Deployment block: `49262540`
 - Deployer RitualWallet escrow: funded on Ritual testnet for deployment verification
@@ -53,6 +53,8 @@ npm run contracts:compile
 npm run build
 npm test
 npm run lint
+npm run typecheck
+npm run security:check
 npm run ritual:check
 ```
 
