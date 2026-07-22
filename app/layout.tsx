@@ -8,8 +8,8 @@ const body = Barlow({ weight: ["400", "500", "600", "700"], subsets: ["latin"], 
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site";
-  let base = new URL("https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site");
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ritual-lilac.vercel.app";
+  let base = new URL("https://ritual-lilac.vercel.app");
   try {
     const candidate = new URL(configuredUrl);
     if (candidate.protocol === "https:" && !candidate.username && !candidate.password) base = candidate;

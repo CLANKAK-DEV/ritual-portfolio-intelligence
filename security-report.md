@@ -6,7 +6,7 @@ The application, Cloudflare Worker, API routes, dependency tree, Git history, CI
 
 ## 2. Project architecture detected
 
-- Next.js 16 and React 19 application built with vinext/Vite and deployed through a Cloudflare Worker.
+- Next.js 16 and React 19 application with two validated production targets: native Next.js on Vercel and vinext/Vite through a Cloudflare Worker.
 - Public, read-only portfolio API integrating Zerion, DeBank, a configurable provider, and Blockscout fallbacks.
 - Same-origin JSON-RPC relay used by Wagmi/Viem for read and simulation calls to Ritual testnet.
 - Solidity 0.8.24 contract using Ritual HTTP, LLM, Scheduler, RitualWallet, tracker, registry, and model primitives.
@@ -20,6 +20,9 @@ The application, Cloudflare Worker, API routes, dependency tree, Git history, CI
 - `rg` manual static searches for command execution, unsafe HTML, dynamic code evaluation, weak randomness, path handling, authorization, Solidity external calls, `tx.origin`, `delegatecall`, and secret patterns.
 - `npm ci --legacy-peer-deps`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
 - `npm run contracts:compile` and the Hardhat local contract security tests included in `npm test`.
+- `npm run build:vercel` and a remote Vercel production build for the native Next.js deployment path.
+- Vercel CLI environment inspection and encrypted environment configuration; secret values were never printed or committed.
+- Vercel Firewall inspection and publication of a global per-IP rate limit for `/api/rpc` and `/api/portfolio`.
 - `npm run ritual:check` for chain ID, system contracts, executors, and registered-model health.
 - Manual creation-bytecode comparison between the deployment transaction and the local artifact, including constructor arguments; the comparison was exact.
 - Semgrep, CodeQL, Gitleaks, TruffleHog, OSV-Scanner, Slither, Echidna, and Forge were skipped because they were not installed in the environment. Their absence is recorded rather than silently treated as a pass.
@@ -98,8 +101,8 @@ The route now accepts only bounded JSON-RPC 2.0 single requests, allows an expli
 - Confidence: Confirmed
 - CWE: CWE-400
 - OWASP category: API4:2023 — Unrestricted Resource Consumption
-- File: app/api/portfolio/route.ts; lib/rate-limit.ts
-- Lines: app/api/portfolio/route.ts 107-160 and 626-692; lib/rate-limit.ts 1-57
+- File: app/api/portfolio/route.ts; lib/rate-limit.ts; Vercel Firewall
+- Lines: app/api/portfolio/route.ts 107-160 and 626-692; lib/rate-limit.ts 1-64
 - Status: Patched
 
 ### Evidence
@@ -116,11 +119,11 @@ Repeated calls or a stalled/oversized upstream response could consume worker tim
 
 ### Secure remediation
 
-The endpoint now applies per-edge-instance throttling, 10-second provider timeouts, two-megabyte response caps, strict JSON handling, safe cache headers, address validation, HTTPS/provider-template validation, private-host rejection, and bounded payload normalization.
+The endpoint now applies trusted-edge throttling on Cloudflare and Vercel, 10-second provider timeouts, two-megabyte response caps, strict JSON handling, safe cache headers, address validation, HTTPS/provider-template validation, private-host rejection, and bounded payload normalization. Vercel additionally enforces a published global WAF limit across both public API endpoints.
 
 ### Validation test
 
-`npm test` covers invalid addresses, and code-level tests plus the production build exercise the guarded handlers. A platform-level Cloudflare rate-limit rule is still recommended for globally consistent enforcement.
+`npm test` covers invalid addresses and Vercel trusted-edge identity handling. The production Vercel Firewall rule was inspected after publication.
 
 ## [SEC-004] Browser responses lacked a global security-header policy
 
@@ -128,8 +131,8 @@ The endpoint now applies per-edge-instance throttling, 10-second provider timeou
 - Confidence: Confirmed
 - CWE: CWE-693
 - OWASP category: A05:2021 — Security Misconfiguration
-- File: worker/index.ts
-- Lines: 22-50
+- File: lib/security-headers.ts; worker/index.ts; next.config.ts
+- Lines: lib/security-headers.ts 1-29; worker/index.ts 1-36; next.config.ts 1-15
 - Status: Patched
 
 ### Evidence
@@ -146,7 +149,7 @@ Browser defense in depth against clickjacking, content injection, MIME confusion
 
 ### Secure remediation
 
-Every Worker response now receives CSP, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, a restrictive Permissions Policy, Referrer Policy, COOP/CORP, and HSTS on HTTPS.
+A shared policy now gives both the Cloudflare Worker and native Vercel/Next.js responses CSP, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `nosniff`, a restrictive Permissions Policy, Referrer Policy, COOP/CORP, and HSTS on HTTPS.
 
 ### Validation test
 
@@ -316,8 +319,8 @@ Metadata now uses a configured HTTPS site URL with a fixed trusted fallback and 
 
 - SEC-001: upgraded direct dependencies, pinned fixed transitive packages, refreshed the lockfile, and added CI dependency enforcement.
 - SEC-002: added a same-origin, read-only, bounded JSON-RPC policy and regression tests.
-- SEC-003: added portfolio throttling, upstream timeouts/size limits, provider URL validation, and bounded normalization.
-- SEC-004: centralized browser security headers at the Worker response boundary.
+- SEC-003: added trusted-edge portfolio throttling, upstream timeouts/size limits, provider URL validation, bounded normalization, and a global Vercel Firewall rule.
+- SEC-004: centralized browser security headers and applied them to both Cloudflare Worker and native Next.js responses.
 - SEC-005: pinned the Ritual model and introduced prompt-injection boundaries plus complete JSON control-character escaping.
 - SEC-006: bounded contract inputs, executor results, error storage, URLs, and schedule parameters.
 - SEC-007: introduced two-step contract ownership transfer and tests.
@@ -325,6 +328,7 @@ Metadata now uses a configured HTTPS site URL with a fixed trusted fallback and 
 - SEC-009: replaced request-derived canonical metadata with validated configuration.
 - Expanded secret scanning to include mnemonic and npm-token formats and all reachable Git history.
 - Pinned GitHub Actions to immutable commit SHAs and deployed the hardened contract at `0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b`.
+- Added an explicit Vercel deployment manifest, upload exclusions, encrypted provider configuration, and a reproducible Node 22 native build.
 
 ## 10. Tests executed
 
@@ -333,14 +337,14 @@ Metadata now uses a configured HTTPS site URL with a fixed trusted fallback and 
 - Post-patch dependency audit: full and production-only audits both report zero vulnerabilities.
 - Post-patch secret scan: passed across tracked files and reachable Git history.
 - Post-patch static gates: TypeScript and ESLint passed.
-- Post-patch tests: 3 Vitest files / 8 tests and 3 rendered integration tests passed.
-- Post-patch builds: Hardhat compilation and the vinext production build passed.
+- Post-patch tests: 3 Vitest files / 9 tests and 3 rendered integration tests passed.
+- Post-patch builds: Hardhat compilation, the vinext production build, the native Next.js build, and Vercel's remote production build passed.
 - Ritual health: chain ID 1979, canonical precompile addresses, system contracts, healthy executors, and the pinned model were confirmed.
 - Deployment integrity: deployed creation bytecode plus constructor arguments exactly matches the local compiled artifact.
 
 ## 11. Remaining risks
 
-No Critical or High issue remains open. The in-memory limiter is intentionally best-effort per Cloudflare isolate; a Cloudflare WAF/rate-limiting rule should be added for globally consistent enforcement. The CSP currently retains `'unsafe-inline'` for framework-generated script/style behavior, although no raw-HTML rendering sink was found. Results still depend on third-party portfolio indexers and Ritual executor availability, and the application remains decision support rather than financial advice. Ritual Explorer returned an internal verifier error after receiving the exact standard JSON/compiler/constructor data, so the new deployment is bytecode-matched but its source publication remains an explorer-side operational task.
+No Critical or High issue remains open. Vercel applies a global WAF rate limit, while the private Cloudflare Sites deployment still uses a per-isolate application limiter. The CSP retains `'unsafe-inline'` for framework-generated script/style behavior, although no raw-HTML rendering sink was found. Results still depend on third-party portfolio indexers and Ritual executor availability, and the application remains decision support rather than financial advice. Ritual Explorer returned an internal verifier error after receiving the exact standard JSON/compiler/constructor data, so the new deployment is bytecode-matched but its source publication remains an explorer-side operational task.
 
 ## 12. Commands for manual verification
 
@@ -354,6 +358,7 @@ npm run lint
 npm test
 npm run contracts:compile
 npm run build
+npm run build:vercel
 npm run ritual:check
 git diff --check
 ```

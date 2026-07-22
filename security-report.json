@@ -45,13 +45,13 @@
       "confidence": "Confirmed",
       "cwe": "CWE-400",
       "owasp_category": "API4:2023 — Unrestricted Resource Consumption",
-      "file": "app/api/portfolio/route.ts; lib/rate-limit.ts",
-      "lines": "app/api/portfolio/route.ts 107-160 and 626-692; lib/rate-limit.ts 1-57",
+      "file": "app/api/portfolio/route.ts; lib/rate-limit.ts; Vercel Firewall",
+      "lines": "app/api/portfolio/route.ts 107-160 and 626-692; lib/rate-limit.ts 1-64",
       "status": "Patched",
       "root_cause": "External indexers and administrator-supplied provider configuration were assumed to be well behaved.",
       "impact": "Repeated calls or stalled and oversized responses could consume worker capacity and provider quota; unsafe configuration could target an unintended host.",
-      "remediation": "Add best-effort throttling, timeouts, size caps, strict JSON parsing, HTTPS/private-host validation, and bounded normalization.",
-      "validation_test": "npm test covers invalid requests and the production build exercises the guarded route."
+      "remediation": "Add trusted-edge throttling, timeouts, size caps, strict JSON parsing, HTTPS/private-host validation, bounded normalization, and a global Vercel WAF rule.",
+      "validation_test": "npm test covers invalid requests and Vercel edge identity; the published firewall rule covers both public API routes."
     },
     {
       "id": "SEC-004",
@@ -60,13 +60,13 @@
       "confidence": "Confirmed",
       "cwe": "CWE-693",
       "owasp_category": "A05:2021 — Security Misconfiguration",
-      "file": "worker/index.ts",
-      "lines": "22-50",
+      "file": "lib/security-headers.ts; worker/index.ts; next.config.ts",
+      "lines": "lib/security-headers.ts 1-29; worker/index.ts 1-36; next.config.ts 1-15",
       "status": "Patched",
       "root_cause": "Security headers were not centralized at the final Worker response boundary.",
       "impact": "Browser defense in depth against clickjacking, injection, MIME confusion, referrer leakage, and device access was weaker than necessary.",
-      "remediation": "Attach CSP, anti-framing, nosniff, permissions, referrer, cross-origin, and HSTS headers to all responses.",
-      "validation_test": "Rendered integration tests assert the headers and npm run build passes."
+      "remediation": "Attach a shared CSP, anti-framing, nosniff, permissions, referrer, cross-origin, and HSTS policy to Cloudflare and native Next.js responses.",
+      "validation_test": "Rendered integration tests assert the headers; both npm run build and npm run build:vercel pass."
     },
     {
       "id": "SEC-005",

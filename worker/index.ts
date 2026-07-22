@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { browserSecurityHeaders, strictTransportSecurity } from "../lib/security-headers";
 
 interface Env {
   ASSETS: Fetcher;
@@ -19,33 +20,11 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "connect-src 'self' https://rpc.ritualfoundation.org",
-  "font-src 'self' data:",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "img-src 'self' data: blob:",
-  "manifest-src 'self'",
-  "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "worker-src 'self' blob:",
-].join("; ");
-
 function secureResponse(request: Request, response: Response) {
   const headers = new Headers(response.headers);
-  headers.set("Content-Security-Policy", contentSecurityPolicy);
-  headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  headers.set("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=(), usb=()");
-  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  for (const header of browserSecurityHeaders) headers.set(header.key, header.value);
   if (new URL(request.url).protocol === "https:") {
-    headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    headers.set(strictTransportSecurity.key, strictTransportSecurity.value);
   }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }

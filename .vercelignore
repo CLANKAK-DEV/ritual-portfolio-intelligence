@@ -1,0 +1,16 @@
+.env*
+.git
+.next
+.vinext
+.wrangler
+.ritual-build
+.codex
+.vercel
+node_modules
+dist
+coverage
+outputs
+work
+contracts/artifacts
+contracts/cache
+*.log

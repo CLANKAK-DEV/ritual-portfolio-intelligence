@@ -12,9 +12,15 @@ const buckets = new Map<string, RateLimitEntry>();
 const MAX_BUCKETS = 5_000;
 
 function clientAddress(request: Request) {
-  // Cloudflare sets this header at the edge. Deliberately do not trust
-  // X-Forwarded-For, which a direct client can spoof.
-  return request.headers.get("cf-connecting-ip")?.trim() || null;
+  // Cloudflare and Vercel overwrite these headers at their trusted edges.
+  // Do not trust a generic X-Forwarded-For value on any other deployment.
+  const cloudflareAddress = request.headers.get("cf-connecting-ip")?.trim();
+  if (cloudflareAddress) return cloudflareAddress.slice(0, 128);
+  if (request.headers.has("x-vercel-id")) {
+    const vercelAddress = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+    if (vercelAddress) return vercelAddress.slice(0, 128);
+  }
+  return null;
 }
 
 function pruneExpiredBuckets(now: number) {

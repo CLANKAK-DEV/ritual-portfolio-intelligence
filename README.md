@@ -12,10 +12,12 @@ A hackathon-ready wallet intelligence product built natively on Ritual Chain. It
 - RitualWallet fee deposit controls, sender-lock checks, and live HTTP executor discovery in the frontend.
 - Hardhat deployment, codec tests, SSR tests, linting, and a read-only Ritual network health check.
 
-Start with the [simple project guide](docs/PROJECT_GUIDE.md). The full system design and trust boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and credential-handling rules are in [SECURITY.md](SECURITY.md).
+Start with the [simple project guide](docs/PROJECT_GUIDE.md) or the [short project introduction](docs/PROJECT_INTRO.md). The full system design and trust boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and credential-handling rules are in [SECURITY.md](SECURITY.md).
 
 ## Live Ritual deployment
 
+- Vercel application: [https://ritual-lilac.vercel.app](https://ritual-lilac.vercel.app)
+- Private Sites deployment: [https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site](https://ritual-portfolio-intelligence.choukerlahoucine.chatgpt.site)
 - Network: Ritual testnet (`1979`)
 - Portfolio consumer: [`0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b`](https://explorer.ritualfoundation.org/address/0xa077b0dea3bb122ed7e71ecdf7ae0d7475343e0b)
 - Deployment transaction: [`0xb202a2ccefa2d29511698be3485774a75b6ddd082a1996a4b85b4425b8e176b1`](https://explorer.ritualfoundation.org/tx/0xb202a2ccefa2d29511698be3485774a75b6ddd082a1996a4b85b4425b8e176b1)
@@ -51,6 +53,7 @@ The Ritual contract intentionally receives neither private provider key. Its HTT
 ```bash
 npm run contracts:compile
 npm run build
+npm run build:vercel
 npm test
 npm run lint
 npm run typecheck
