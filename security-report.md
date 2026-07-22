@@ -329,7 +329,7 @@ Metadata now uses a configured HTTPS site URL with a fixed trusted fallback and 
 ## 10. Tests executed
 
 - Baseline: typecheck, lint, application tests, contract compilation, and build passed; dependency audit reported 41 advisories.
-- Post-patch fresh install: `npm ci --legacy-peer-deps` passed and audited 677 packages with zero vulnerabilities.
+- Post-patch fresh installs: local `npm ci --legacy-peer-deps` and GitHub-compatible `npx npm@10.9.8 ci --legacy-peer-deps` passed with zero vulnerabilities.
 - Post-patch dependency audit: full and production-only audits both report zero vulnerabilities.
 - Post-patch secret scan: passed across tracked files and reachable Git history.
 - Post-patch static gates: TypeScript and ESLint passed.
